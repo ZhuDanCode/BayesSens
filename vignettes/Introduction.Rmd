@@ -1,0 +1,52 @@
+---
+title: "Introduction to [add package name]"
+author: "[add author name]"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+#### Data simulation 
+We load the package and simulate some data from the gaussian model with the function `gaussian_data(n, p)`, where `n` is the number of datapoints, and `p` is the number of measurements per datapoint. There are two optional arguments `beta` and `sigma`. 
+
+```{r}
+library(autoBayes)
+n <- 100
+p <- 3
+data0 <- gaussian_data(n, p)
+str(data0)
+```
+
+
+#### The model
+Observed data $y = (y_1, ..., y_n)'$ with distribution
+$$y \sim N_n(X\beta, \sigma^2 I_n)$$
+
+with prior distributions
+$$\beta \sim N_K(\beta_0, B_0) \quad \text{and}\quad \sigma^2 \sim IG(\alpha_0 /2, \delta_0 / 2)$$
+
+
+#### Inference with MCMC
+We fit the model using MCMC using the function `gaussian_Gibbs`. We need to provide `b_0, B_0, alpha_0` and `delta_0`. For convenience, here we simply initialise them randomly.
+```{r}
+res <- gaussian_Gibbs(data0$X, data0$y,
+  b_0 = rnorm(p), B_0 = pdmatrix(p)$Sigma, alpha_0 = 13, delta_0 = 8,
+)
+```
+
+
+Finally, we can plot out the posterior distribution of each parameter.
+```{r, fig.width=7, fig.height=6}
+plot_posterior(res)
+```
+
