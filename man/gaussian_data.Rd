@@ -4,16 +4,20 @@
 \alias{gaussian_data}
 \title{Simulate data from a linear regression model with gaussian noise}
 \usage{
-gaussian_data(n, p, beta, sigma)
+gaussian_data(n, p, beta, sigma, intercept = TRUE)
 }
 \arguments{
 \item{n}{integer; number of datapoints.}
 
 \item{p}{integer; number of measurements.}
 
-\item{beta}{(optional) numeric vector; the regression coefficients.}
+\item{beta}{(optional) numeric vector; the regression coefficients.
+It should be of length (p+1) if 'intercept = T', and the intercept
+should be the first element.}
 
 \item{sigma}{positive number; the standard deviation of the distribution.}
+
+\item{intercept}{TRUE or FALSE; whether to include an intercept / bias term.}
 }
 \value{
 A list of the data X, y, and the parameters beta, sigma.
@@ -23,5 +27,5 @@ Simulate data from a linear regression model with gaussian noise
 }
 \examples{
 data0 <- gaussian_data(n = 100, p = 10)
-data1 <- gaussian_data(n = 100, p = 3, beta = c(0.2, -0.3, 0.4), sigma = 2)
+data1 <- gaussian_data(n = 100, p = 3, beta = c(0.2, -0.3, 0.4), sigma = 2, intercept = FALSE)
 }
