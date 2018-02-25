@@ -24,24 +24,25 @@
 #' )
 #' }
 #' @export
-IPA <- function(model0, X, y, param, change, pos = 1, h, stat_fun = mean) {
-  new_param <- param
-  new_param[[change]][pos] <- new_param[[change]][pos] + h
-  data0 <- list(X = X, y = y)
-
-  base_res <- do.call(model0, append(data0, param))
-  compare_res <- do.call(model0, append(data0, new_param))
-
-  compute_stat <- function(x) {
-    if (is.null(nrow(x))) return(stat_fun(x))
-    apply(x, 2, stat_fun)
-  }
-  compute_sense <- function(x, y) {
-    (compute_stat(x) - compute_stat(y)) / h
-  }
-
-  purrr::map2(base_res, compare_res, ~compute_sense(.x, .y)) %>%
-    setNames(paste0(
-      names(base_res), "_sensitivity_to_", change, ifelse(pos == 1, "", pos)
-    ))
-}
+#'
+# IPA <- function(model0, X, y, param, change, pos = 1, h, stat_fun = mean) {
+#   new_param <- param
+#   new_param[[change]][pos] <- new_param[[change]][pos] + h
+#   data0 <- list(X = X, y = y)
+#
+#   base_res <- do.call(model0, append(data0, param))
+#   compare_res <- do.call(model0, append(data0, new_param))
+#
+#   compute_stat <- function(x) {
+#     if (is.null(nrow(x))) return(stat_fun(x))
+#     apply(x, 2, stat_fun)
+#   }
+#   compute_sense <- function(x, y) {
+#     (compute_stat(x) - compute_stat(y)) / h
+#   }
+#
+#   purrr::map2(base_res, compare_res, ~compute_sense(.x, .y)) %>%
+#     setNames(paste0(
+#       names(base_res), "_sensitivity_to_", change, ifelse(pos == 1, "", pos)
+#     ))
+# }
