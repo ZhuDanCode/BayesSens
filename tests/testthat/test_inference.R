@@ -4,9 +4,10 @@ test_that("gaussian_Gibbs", {
   n <- 1000
   p <- 5
   set.seed(123)
-  data0 <- gaussian_data(n, p)
+  data0 <- gaussian_data(n, p, intercept = TRUE)
   res <- gaussian_Gibbs(data0$X, data0$y,
-    b_0 = rnorm(p), B_0 = pdmatrix(p)$Sigma, alpha_0 = 13, delta_0 = 8,
+    b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,
+    alpha_0 = 13, delta_0 = 8
   )
   # check with frequentist approach
   glm_model0 <- glm(data0$y ~ data0$X - 1, family = gaussian())
