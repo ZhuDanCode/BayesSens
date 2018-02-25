@@ -21,14 +21,3 @@ pdmatrix <- function(...) {
 zeros <- function(nr = 1, nc = 1) {
   matrix(numeric(nr * nc), nr, nc)
 }
-
-
-init_differential <- function(len0, l_b0) {
-  list(
-    d_b0 = zeros(len0, l_b0),
-    d_B0 = zeros(len0, l_b0^2),
-    d_alpha0 = zeros(len0, 1),
-    d_delta0 = zeros(len0, 1),
-    d_sigma2_0 = zeros(len0, 1)
-  )
-}
