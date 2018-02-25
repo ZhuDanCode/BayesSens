@@ -23,7 +23,7 @@ We load the package and simulate some data from the gaussian model with the func
 library(autoBayes)
 n <- 100
 p <- 3
-data0 <- gaussian_data(n, p)
+data0 <- gaussian_data(n, p, intercept = T)
 str(data0)
 ```
 
@@ -40,7 +40,8 @@ $$\beta \sim N_K(\beta_0, B_0) \quad \text{and}\quad \sigma^2 \sim IG(\alpha_0 /
 We fit the model using MCMC using the function `gaussian_Gibbs`. We need to provide `b_0, B_0, alpha_0` and `delta_0`. For convenience, here we simply initialise them randomly.
 ```{r}
 res <- gaussian_Gibbs(data0$X, data0$y,
-  b_0 = rnorm(p), B_0 = pdmatrix(p)$Sigma, alpha_0 = 13, delta_0 = 8,
+  b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma, # add one for intercept
+  alpha_0 = 13, delta_0 = 8,
 )
 ```
 
