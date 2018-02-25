@@ -35,9 +35,9 @@ prior for the mean and inverse gamma for the variance.
 }
 \examples{
 \dontrun{
-n <- 100
-p <- 10
-data0 <- gaussian_data(n, p, intercept = T)
+n <- 1000
+p <- 5
+data0 <- gaussian_data(n, p, intercept = TRUE)
 res <- gaussian_AD(data0$X, data0$y,
   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
   alpha_0 = 13, delta_0 = 8,
