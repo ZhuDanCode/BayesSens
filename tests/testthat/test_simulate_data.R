@@ -7,3 +7,14 @@ test_that("gaussian_data", {
   expect_equal(any(is.na(data0$beta)), FALSE)
   expect_gt(data0$sigma, 0)
 })
+
+
+test_that("student_t_data", {
+  data0 <- student_t_data(100, 10)
+  expect_equal(length(data0), 4)
+  expect_equal(names(data0), c("X", "y", "beta", "df"))
+  expect_equal(any(is.na(data0$X)), FALSE)
+  expect_equal(any(is.na(data0$y)), FALSE)
+  expect_equal(any(is.na(data0$beta)), FALSE)
+  expect_gt(data0$df, 0)
+})
