@@ -131,5 +131,3 @@ student_t_Gibbs <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     beta = res %>% purrr::map(~.x$beta) %>% tail(keep) %>% do.call(rbind, .)
   )
 }
-
-

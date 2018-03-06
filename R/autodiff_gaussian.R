@@ -54,7 +54,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   I_nn <- diag(len_beta^2)
   K_nn <- matrixcalc::commutation.matrix(len_beta)
   elimL <- matrixcalc::elimination.matrix(len_beta)
-  commD <- matrixcalc::duplication.matrix(len_beta)
+  # commD <- matrixcalc::duplication.matrix(len_beta)
   deriv_Bg <- function(sigma_g, d_sigma2) {
     d_Bg <- init_gauss_differential(len_beta^2, len_beta)
     inv_A <- solve(XTX / sigma_g^2 + inv_B_0)  # intermediate variable
@@ -85,7 +85,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   deriv_beta <- function(sigma_g, d_sigma2, B_g, z) {
     n <- nrow(B_g)
     L <- t(chol(B_g))
-    fac_1 <- t(elimL) %*% solve(elimL %*% (I_nn + K_nn) %*% (L %x% I_n) %*% commD) %*% elimL
+    fac_1 <- t(elimL) %*% solve(elimL %*% (I_nn + K_nn) %*% (L %x% I_n) %*% t(elimL)) %*% elimL
     # fac_1 <- solve((L %x% I_n) + (I_n %x% L) %*% K_nn)
     z_mat <- t(z) %x% I_n
 
