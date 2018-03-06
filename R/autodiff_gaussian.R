@@ -23,16 +23,12 @@
 #' @export
 gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
                         beta, sigma, num_steps = 1e4, burn_ins = 1e3) {
-  if (missing(beta))
-    beta <- MASS::mvrnorm(1, b_0, B_0)
   if (missing(sigma))
     sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
-  keep <- num_steps - burn_ins
 
   # Initialisation
   n <- length(y)
   alpha_1 <- alpha_0 + n
-  beta_g <- beta
   sigma_g <- sigma
   # Autodiff variables
   len_beta <- length(beta)
@@ -40,6 +36,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   d_sigma2 <- init_gauss_differential(1, len_beta)
   d_sigma2$d_sigma2_0 <- matrix(1)
   # Variables to keep track
+  keep <- num_steps - burn_ins
   runs_param <- vector("list", num_steps)
   runs_d_beta <- vector("list", num_steps)
   runs_d_sigma2 <- vector("list", num_steps)
@@ -87,17 +84,17 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     L <- t(chol(B_g))
     fac_1 <- t(elimL) %*% solve(elimL %*% (I_nn + K_nn) %*% (L %x% I_n) %*% t(elimL)) %*% elimL
     # fac_1 <- solve((L %x% I_n) + (I_n %x% L) %*% K_nn)
-    z_mat <- t(z) %x% I_n
+    z_mat <- (t(z) %x% I_n) %*% fac_1
 
     d_beta <- init_gauss_differential(len_beta, len_beta)
     d_Bg <- deriv_Bg(sigma_g, d_sigma2)
     d_bg <- deriv_bg(sigma_g, d_sigma2, B_g, d_Bg)
 
-    d_beta$d_b0 <- d_bg$d_b0 +  z_mat %*% fac_1 %*% d_Bg$d_b0
-    d_beta$d_B0 <- d_bg$d_B0 + z_mat %*% fac_1 %*% d_Bg$d_B0
-    d_beta$d_alpha0 <- d_bg$d_alpha0 + z_mat %*% fac_1 %*% d_Bg$d_alpha0
-    d_beta$d_delta0 <- d_bg$d_delta0 + z_mat %*% fac_1 %*% d_Bg$d_delta0
-    d_beta$d_sigma2_0 <- d_bg$d_sigma2_0 + z_mat %*% fac_1 %*% d_Bg$d_sigma2_0
+    d_beta$d_b0 <- d_bg$d_b0 +  z_mat %*% d_Bg$d_b0
+    d_beta$d_B0 <- d_bg$d_B0 + z_mat %*% d_Bg$d_B0
+    d_beta$d_alpha0 <- d_bg$d_alpha0 + z_mat %*% d_Bg$d_alpha0
+    d_beta$d_delta0 <- d_bg$d_delta0 + z_mat %*% d_Bg$d_delta0
+    d_beta$d_sigma2_0 <- d_bg$d_sigma2_0 + z_mat %*% d_Bg$d_sigma2_0
     d_beta
   }
   deriv_delta <- function(beta_g, d_beta) {
@@ -123,11 +120,11 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     d_delta <- deriv_delta(beta_g, d_beta)
     d_G <- deriv_G(G, 0.5 * alpha_1)
     d_sigma2 <- init_gauss_differential(1, len_beta)
-    d_sigma2$d_b0 <- d_delta$d_b0 / (2 * G) - delta_g / (2 * G) * d_G$d_b0
-    d_sigma2$d_B0 <- d_delta$d_B0 / (2 * G) - delta_g / (2 * G) * d_G$d_B0
-    d_sigma2$d_alpha0 <- d_delta$d_alpha0 / (2 * G) - delta_g / (2 * G) * d_G$d_alpha0
-    d_sigma2$d_delta0 <- d_delta$d_delta0 / (2 * G) - delta_g / (2 * G) * d_G$d_delta0
-    d_sigma2$d_sigma2_0 <- d_delta$d_sigma2_0 / (2 * G) - delta_g / (2 * G) * d_G$d_sigma2_0
+    d_sigma2$d_b0 <- d_delta$d_b0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_b0
+    d_sigma2$d_B0 <- d_delta$d_B0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_B0
+    d_sigma2$d_alpha0 <- d_delta$d_alpha0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_alpha0
+    d_sigma2$d_delta0 <- d_delta$d_delta0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_delta0
+    d_sigma2$d_sigma2_0 <- d_delta$d_sigma2_0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_sigma2_0
     d_sigma2
   }
 
