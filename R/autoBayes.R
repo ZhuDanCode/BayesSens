@@ -1,5 +1,5 @@
 #' Import functions
-#' @name Import_functions
+#' @name imports
 #' @importFrom stats runif rnorm rgamma setNames dgamma integrate pgamma rt
 #' @importFrom graphics hist par
 #' @importFrom utils tail setTxtProgressBar txtProgressBar
