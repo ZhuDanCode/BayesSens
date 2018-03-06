@@ -1,4 +1,4 @@
 library(testthat)
-library(autoBayes)
+library(BayesSense)
 
-test_check("autoBayes")
+test_check("BayesSense")

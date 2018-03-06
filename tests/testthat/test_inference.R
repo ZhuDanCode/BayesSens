@@ -1,4 +1,4 @@
-library(autoBayes)
+library(BayesSense)
 test_that("gaussian_Gibbs", {
   skip_on_cran()
   n <- 1000

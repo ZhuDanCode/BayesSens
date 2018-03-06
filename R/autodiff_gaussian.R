@@ -1,4 +1,4 @@
-#' Model inference for normal regression model with multivariate normal
+#' Sensitivity analysis for normal regression model with multivariate normal
 #' prior for the mean and inverse gamma for the variance.
 #' @param X A numeric matrix; the covariates.
 #' @param y A numeric vector; the response variable.

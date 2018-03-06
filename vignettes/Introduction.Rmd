@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 We load the package and simulate some data from the gaussian model with the function `gaussian_data(n, p)`, where `n` is the number of datapoints, and `p` is the number of measurements per datapoint. There are two optional arguments `beta` and `sigma`. 
 
 ```{r}
-library(autoBayes)
+library(BayesSense)
 n <- 100
 p <- 3
 data0 <- gaussian_data(n, p, intercept = T)
