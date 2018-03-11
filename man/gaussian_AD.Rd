@@ -5,7 +5,7 @@
 \title{Sensitivity analysis for normal regression model with multivariate normal
 prior for the mean and inverse gamma for the variance.}
 \usage{
-gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, beta, sigma, num_steps = 10000,
+gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps = 10000,
   burn_ins = 1000)
 }
 \arguments{
@@ -21,9 +21,7 @@ gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, beta, sigma, num_steps = 10000,
 
 \item{delta_0}{A positive number; the rate parameter of the inverse-gamma prior.}
 
-\item{beta}{(Optional) A numeric vector}
-
-\item{sigma}{(Optional) A numeric matrix}
+\item{init_sigma}{(Optional) A numeric matrix}
 
 \item{num_steps}{Integer; number of MCMC steps.}
 

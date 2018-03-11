@@ -6,8 +6,7 @@
 #' @param B_0 A numeric matrix; the covariance for the multivariate normal prior.
 #' @param alpha_0 A positive number; the shape parameter of the inverse-gamma prior.
 #' @param delta_0 A positive number; the rate parameter of the inverse-gamma prior.
-#' @param beta (Optional) A numeric vector
-#' @param sigma (Optional) A numeric matrix
+#' @param init_sigma (Optional) A numeric matrix
 #' @param num_steps Integer; number of MCMC steps.
 #' @param burn_ins Integer; number of burn-ins.
 #' @examples
@@ -22,16 +21,16 @@
 #' }
 #' @export
 gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
-                        beta, sigma, num_steps = 1e4, burn_ins = 1e3) {
-  if (missing(sigma))
-    sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
+                        init_sigma, num_steps = 1e4, burn_ins = 1e3) {
+  if (missing(init_sigma))
+    init_sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
 
   # Initialisation
   n <- length(y)
   alpha_1 <- alpha_0 + n
-  sigma_g <- sigma
+  sigma_g <- init_sigma
   # Autodiff variables
-  len_beta <- length(beta)
+  len_beta <- length(b_0)
   d_beta <- init_gauss_differential(len_beta, len_beta)
   d_sigma2 <- init_gauss_differential(1, len_beta)
   d_sigma2$d_sigma2_0 <- matrix(1)
