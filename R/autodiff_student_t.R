@@ -68,7 +68,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     inv_A <- solve(XTLX / sigma_g^2 + inv_B_0)  # intermediate variable
     fac_1 <- - (t(inv_A) %x% inv_A)
     fac_2 <- - matrixcalc::vec(XTLX) / sigma_g^4
-    fac_2b <- sigma_g^2 * (t(X) %x% t(X))
+    fac_2b <- sigma_g^(-2) * (t(X) %x% t(X))
     fac_3 <- fac_1 %*% fac_2
     fac_3b <- fac_1 %*% fac_2b
 

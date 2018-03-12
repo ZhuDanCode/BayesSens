@@ -37,5 +37,5 @@ collect <- function(l0) {
   for (i in seq_along(list_names)) {
     res[[i]] <- purrr::map(l0, ~.x[[list_names[i]]]) %>% do.call(rbind, .)
   }
-  set_names(res, list_names)
+  purrr::set_names(res, list_names)
 }
