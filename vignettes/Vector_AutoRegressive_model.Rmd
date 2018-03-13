@@ -1,0 +1,79 @@
+---
+title: "Bayesian Vector Autoregressive Model (VAR)"
+author: "Jackson Kwok"
+date: "13/03/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The two major functions are `simulate_VAR` and `VAR_Gibbs`. The first simulates from a Vector-Auto-Regressive (VAR) model; the second infers the model parameters from data using Gibbs sampling.
+
+First we introduce the simulation function. The model considered uses independent Normal distribution and inverse-Wishart distribution as priors. If the hyperparameters are not provided, then they will be generated randomly.
+```{r}
+library(BayesSense)
+num_data <- 2
+dim_data <- 2
+lag <- 1
+
+sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
+sim
+```
+
+
+Since the formulation and the implementation of the VAR model use different notations, there are a few helper functions to convert between them.
+```{r, results='hold'}
+sim$data
+m0 <- VAR_model_matrix(sim$data, 1)
+print(m0)
+```
+
+```{r, results='hold'}
+sim$model
+vec0 <- VAR_model_to_vec(sim$model)
+print(vec0)
+
+VAR_vec_to_model_coeff(vec0, n = 2)
+```
+
+
+Next, we introduce the function for inference, `VAR_Gibbs`.
+```{r, results='hide'}
+set.seed(345)
+num_data <- 300
+dim_data <- 2
+lag <- 2
+converted_dim <- dim_data + dim_data^2 * lag
+
+sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
+data0 <- sim$data
+res <- VAR_Gibbs(data0, p = lag, 
+          b_0 = rnorm(converted_dim), V = pdmatrix(converted_dim)$Sigma, 
+          v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma,
+          num_steps = 1e4, burn_ins = 1e3)
+```
+
+```{r}
+# Compare estimated parameters with the true ones
+sim$model
+param_posterior_mean(res, dim_data, lag)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
