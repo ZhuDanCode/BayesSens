@@ -62,7 +62,7 @@ VAR_vec_to_model_coeff <- function(vec0, n) {
   s <- seq(2, nrow(m0), n)
   list(
     b_0 = m0[1,],
-    B = purrr::map2(s, s+n-1, ~m0[.x:.y, , drop = F])
+    B = purrr::map2(s, s+n-1, ~t(m0[.x:.y, , drop = F]))
   )
 }
 
@@ -133,6 +133,14 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
 
     # Update Sigma
     coeff_g <- VAR_vec_to_model_coeff(beta_g, n)
+    print(microbenchmark::microbenchmark(
+      residuals_cov2(y, X, beta_g, n),
+      residuals_cov(data0, coeff_g$b_0, coeff_g$B)
+    ))
+    print(residuals_cov2(y, X, beta_g, n))
+    print(residuals_cov(data0, coeff_g$b_0, coeff_g$B))
+    co <- readline("Continue?")
+    if (co == 'n') return(NULL)
     S_g <- S_0 + residuals_cov(data0, coeff_g$b_0, coeff_g$B)
     Sigma_g <- MCMCpack::riwish(v_1, S_g)
 
@@ -149,24 +157,14 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   )
 }
 
-residuals_cov <- function(y_t, b_0, B) {
-  p <- length(B)
-  T0 <- ncol(y_t) - p
-  y_t <- y_t[, ncol(y_t):1]
+
+residuals_cov <- function(y, X, beta_g, n) {
+  tmp <- matrix(y - X %*% beta_g, nrow = n, byrow = F)
   res <- 0
-  for (i in 1:T0) {
-    vec0 <- y_t[,i] - fit_ts(b_0, B, y_t[, (i+1):(i+p), drop = FALSE])
-    res <- res + vec0 %*% t(vec0)
+  for (i in 1:ncol(tmp)) {
+    res <- res + tmp[,i] %*% t(tmp[,i])
   }
   res
-}
-
-fit_ts <- function(b, B, y_t) {
-  z <- b
-  for (i in seq_along(B)) {
-    z <- z + B[[i]] %*% y_t[,i]
-  }
-  z
 }
 
 
