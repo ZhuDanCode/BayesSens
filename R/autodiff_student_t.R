@@ -142,7 +142,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     integral_1 <- integrate(f, 0, G)
     num_1 <- integral_1$value
     num_2 <- digamma(alpha) * pgamma(G, alpha, 1)
-    d_G$d_alpha0 <- - (num_1 - num_2) / dgamma(G, alpha, 1)
+    d_G$d_alpha0 <- - 0.5 * (num_1 - num_2) / dgamma(G, alpha, 1)
     d_G
   }
   deriv_sigma2 <- function(beta_g, delta_g, G, alpha_1, d_beta, Lambda_g, d_Lambda) {
