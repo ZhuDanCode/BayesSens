@@ -13,6 +13,6 @@ Package 'BayesSense'
 \author{
 Liana Jacobi <ljacobi@unimelb.edu.au>,
 Dan Zhu <dan.zhu@monash.edu>,
-Chun Fung Kwok <kcf.jackson@gmail.com>,
+Chun Fung Kwok <kwokcf@unimelb.edu.au>,
 Kai-Yang Goh <kaiyanggoh@hotmail.com>
 }

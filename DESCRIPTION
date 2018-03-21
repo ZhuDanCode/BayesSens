@@ -1,10 +1,10 @@
 Package: BayesSense
 Type: Package
 Title: Sensitivity analysis for Bayesian Inference
-Version: 0.1.9
+Version: 0.2.0
 Author: Liana Jacobi <ljacobi@unimelb.edu.au>, 
     Dan Zhu <dan.zhu@monash.edu>, 
-    Chun Fung Kwok <kcf.jackson@gmail.com>,
+    Chun Fung Kwok <kwokcf@unimelb.edu.au>,
     Kai-Yang Goh <kaiyanggoh@hotmail.com>
 Maintainer: Chun Fung Kwok <kcf.jackson@gmail.com>
 Description: This package computes local derivatives of Bayesian outputs, e.g. MCMC 

@@ -88,8 +88,7 @@ VAR_model_matrix <- function(data0, p) {
 # Inference
 #' Model inference for Bayesian Vector-AutoRegressive (VAR) model with
 #' normal-inverse-Wishart priors.
-#' prior for the mean and inverse gamma for the variance.
-#' @param data0 A numeric matrix; the multivariate time series. The number
+#' @param data0 A numeric matrix; a multivariate time series. The number
 #' of columns is equal to the number of time points, the number of rows is
 #' equal to the dimension of the observation. One can get such data from
 #' the first component of the output from 'simulate_VAR'.
@@ -132,16 +131,7 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     beta_g <- MASS::mvrnorm(1, b_g, inv_K_g)
 
     # Update Sigma
-    coeff_g <- VAR_vec_to_model_coeff(beta_g, n)
-    print(microbenchmark::microbenchmark(
-      residuals_cov2(y, X, beta_g, n),
-      residuals_cov(data0, coeff_g$b_0, coeff_g$B)
-    ))
-    print(residuals_cov2(y, X, beta_g, n))
-    print(residuals_cov(data0, coeff_g$b_0, coeff_g$B))
-    co <- readline("Continue?")
-    if (co == 'n') return(NULL)
-    S_g <- S_0 + residuals_cov(data0, coeff_g$b_0, coeff_g$B)
+    S_g <- S_0 + residuals_cov(y, X, beta_g, n)
     Sigma_g <- MCMCpack::riwish(v_1, S_g)
 
     # Keep track

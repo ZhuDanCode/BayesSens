@@ -3,14 +3,13 @@
 \name{VAR_Gibbs}
 \alias{VAR_Gibbs}
 \title{Model inference for Bayesian Vector-AutoRegressive (VAR) model with
-normal-inverse-Wishart priors.
-prior for the mean and inverse gamma for the variance.}
+normal-inverse-Wishart priors.}
 \usage{
 VAR_Gibbs(data0, p, b_0, V, v_0, S_0, init_Sigma, num_steps = 10000,
   burn_ins = 1000)
 }
 \arguments{
-\item{data0}{A numeric matrix; the multivariate time series. The number
+\item{data0}{A numeric matrix; a multivariate time series. The number
 of columns is equal to the number of time points, the number of rows is
 equal to the dimension of the observation. One can get such data from
 the first component of the output from 'simulate_VAR'.}
@@ -34,5 +33,4 @@ the first component of the output from 'simulate_VAR'.}
 \description{
 Model inference for Bayesian Vector-AutoRegressive (VAR) model with
 normal-inverse-Wishart priors.
-prior for the mean and inverse gamma for the variance.
 }
