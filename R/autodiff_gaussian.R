@@ -112,12 +112,12 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     integral_1 <- integrate(f, 0, G)
     num_1 <- integral_1$value
     num_2 <- digamma(alpha) * pgamma(G, alpha, 1)
-    d_G$d_alpha0 <- - 0.5 * (num_1 - num_2) / dgamma(G, alpha, 1)
+    d_G$d_alpha0 <- - (num_1 - num_2) / dgamma(G, alpha, 1)
     d_G
   }
   deriv_sigma2 <- function(beta_g, delta_g, G, alpha_1, d_beta) {
     d_delta <- deriv_delta(beta_g, d_beta)
-    d_G <- deriv_G(G, 0.5 * alpha_1)
+    d_G <- 0.5 * deriv_G(G, 0.5 * alpha_1)
     d_sigma2 <- init_gauss_differential(1, len_beta)
     d_sigma2$d_b0 <- d_delta$d_b0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_b0
     d_sigma2$d_B0 <- d_delta$d_B0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_B0
