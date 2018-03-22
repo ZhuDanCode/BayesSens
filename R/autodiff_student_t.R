@@ -136,19 +136,18 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     d_delta$d_sigma2_0 <- fac_1 %*% d_beta$d_sigma2_0 + fac_2 %*% d_Lambda$d_sigma2_0
     d_delta
   }
-  deriv_G <- function(G, alpha) {
+  deriv_G <- function(G, alpha, var_name) {
     d_G <- ext_d_G
     f <- function(t) { log(t) * dgamma(t, alpha, 1) }
-    integral_1 <- integrate(f, 0, G)
-    num_1 <- integral_1$value
+    num_1 <- integrate(f, 0, G)$value
     num_2 <- digamma(alpha) * pgamma(G, alpha, 1)
-    d_G$d_alpha0 <- - (num_1 - num_2) / dgamma(G, alpha, 1)
+    d_G[[var_name]] <- - 0.5 * (num_1 - num_2) / dgamma(G, alpha, 1)
     d_G
   }
   deriv_sigma2 <- function(beta_g, delta_g, G, alpha_1, d_beta, Lambda_g, d_Lambda) {
     delta_g <- as.numeric(delta_g)
     d_delta <- deriv_delta(beta_g, d_beta, Lambda_g, d_Lambda)
-    d_G <- 0.5 * deriv_G(G, 0.5 * alpha_1)
+    d_G <- deriv_G(G, 0.5 * alpha_1, "d_alpha0")
     d_sigma2 <- ext_d_sigma2
     d_sigma2$d_b0 <- d_delta$d_b0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_b0
     d_sigma2$d_B0 <- d_delta$d_B0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_B0
@@ -191,7 +190,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   }
   deriv_Lambda <- function(nu, G, sigma_g, d_sigma2, beta_g, d_beta) {
     d_v_2i <- purrr::map(seq(n), ~deriv_v_2i(.x, nu, sigma_g, d_sigma2, beta_g, d_beta))
-    dG <- purrr::map(seq(n), ~ 0.5 * deriv_G(G[.x], 0.5 * nu_1))
+    dG <- purrr::map(seq(n), ~ deriv_G(G[.x], 0.5 * nu_1, "d_nu"))
     d_lambda_i <- seq(n) %>%
       purrr::map(~deriv_lambda_i(.x, G[.x], dG[[.x]], nu, d_v_2i[[.x]], sigma_g, d_sigma2, beta_g, d_beta)) %>%
       collect()
