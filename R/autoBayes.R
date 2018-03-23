@@ -1,6 +1,6 @@
 #' Import functions
 #' @name imports
-#' @importFrom stats runif rnorm rgamma setNames dgamma integrate pgamma rt
+#' @importFrom stats runif rnorm rgamma setNames dgamma integrate pgamma rt rchisq
 #' @importFrom graphics hist par
 #' @importFrom utils tail setTxtProgressBar txtProgressBar
 #' @importFrom magrittr %>% %<>%
