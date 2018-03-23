@@ -72,9 +72,45 @@ converted_dim <- dim_data + dim_data^2 * lag
 sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
 data0 <- sim$data
 
-# debug(VAR_AD)
+prior_cov <- pdmatrix(converted_dim)$Sigma
 res <- VAR_AD(data0, p = lag, 
-       b_0 = rnorm(converted_dim), V = pdmatrix(converted_dim)$Sigma, 
-       v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma,
-       num_steps = 1e4, burn_ins = 10)
+       b_0 = rnorm(converted_dim), V = prior_cov, 
+       v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma, 
+       num_steps = 1e3, burn_ins = 10)
+```
+
+## Comparison with the Likelihood-Ratio approach
+```{r}
+library(purrr)
+# Table 2
+inv_pcov <- solve(prior_cov)
+LR_estimate <- c(t(inv_pcov %*% cov(res$beta)))
+AD_estimate <- colMeans(res$d_beta$d_b0)
+cbind(LR_estimate, AD_estimate)
+
+# Convergence comparison
+# LR estimates
+s <- seq(min(nrow(res$beta) / 10, 100), nrow(res$beta), length.out = 20)
+LR_estimates <- map(
+  s, ~c(t(inv_pcov %*% cov(res$beta[seq(.x), ])))
+) %>%
+  do.call(rbind, .)
+
+# AD estimates
+AD_estimates <- map(s, ~colMeans(res$d_beta$d_b0[seq(.x), ])) %>%
+  do.call(rbind, .)
+
+# Plots
+for (i in 1:min(ncol(LR_estimates), 10)) {
+  LR_est <- LR_estimates[,i]
+  AD_est <- AD_estimates[,i]
+  plot(x = s, y = LR_est, ylim = range(c(LR_est, AD_est)), type = 'n',
+       main = "Prior Mean Robustness", xlab = "Length of chain",
+       ylab = "Sensitivity")
+  legend(x = "topright", legend = c("Likelihood Ratio", "Auto-differentiation"),
+         col = c("black", "blue"), lwd = c(1, 2))
+  lines(s, LR_est)
+  lines(s, AD_est, col = "blue", lwd = 2)
+  # if (readline("Continue? Y or N: ") == "N") break
+}
 ```
