@@ -111,8 +111,8 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   n <- nrow(data0)
   y <- matrixcalc::vec(data0[,seq(T0) + p])
   X <- VAR_model_matrix(data0, p)
+  tX <- t(X)
   inv_V <- solve(V)
-  I_T <- diag(T0)
   Sigma_g <- init_Sigma
   inv_V_times_b_0 <- inv_V %*% b_0
   v_1 <- v_0 + T0
@@ -124,7 +124,7 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   for (i in 1:num_steps) {
     # Update beta
     inv_Sigma_g <- solve(Sigma_g)
-    tX_fac <- t(X) %*% (I_T %x% inv_Sigma_g)
+    tX_fac <- kronecker_sp_1(tX, inv_Sigma_g)
     K_g <- inv_V + tX_fac %*% X
     inv_K_g <- solve(K_g)
     b_g <- inv_K_g %*% (inv_V_times_b_0 + tX_fac %*% y)
@@ -150,11 +150,7 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
 
 residuals_cov <- function(y, X, beta_g, n) {
   tmp <- matrix(y - X %*% beta_g, nrow = n, byrow = F)
-  res <- 0
-  for (i in 1:ncol(tmp)) {
-    res <- res + tmp[,i] %*% t(tmp[,i])
-  }
-  res
+  tmp %*% t(tmp)
 }
 
 
