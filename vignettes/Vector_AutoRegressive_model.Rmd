@@ -41,7 +41,7 @@ VAR_vec_to_model_coeff(vec0, n = 2)
 
 Next, we introduce the function for inference, `VAR_Gibbs`.
 ```{r, results='hide'}
-set.seed(345)
+# set.seed(345)
 num_data <- 300
 dim_data <- 2
 lag <- 2
@@ -61,3 +61,20 @@ sim$model
 param_posterior_mean(res, dim_data, lag)
 ```
 
+
+Finally, we introduce the function for sensitivity analysis, `VAR_AD`.
+```{r}
+num_data <- 30
+dim_data <- 2
+lag <- 2
+converted_dim <- dim_data + dim_data^2 * lag
+
+sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
+data0 <- sim$data
+
+# debug(VAR_AD)
+res <- VAR_AD(data0, p = lag, 
+       b_0 = rnorm(converted_dim), V = pdmatrix(converted_dim)$Sigma, 
+       v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma,
+       num_steps = 1e4, burn_ins = 10)
+```
