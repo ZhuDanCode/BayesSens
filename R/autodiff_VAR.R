@@ -33,26 +33,28 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   runs_d_Sigma <- vector("list", num_steps)
 
   # Autodiff helper variables and functions
-  I_T <- diag(T0)
-  I_n <- diag(n)
-  I_q <- diag(len_beta)
-  I_nn <- diag(n^2)
-  I_qq <- diag(len_beta^2)
-  K_nn <- matrixcalc::commutation.matrix(n, n)
-  K_qq <- matrixcalc::commutation.matrix(len_beta)
-  K_nT <- matrixcalc::commutation.matrix(n, T0)
-  elimL <- matrixcalc::elimination.matrix(len_beta)
-  E <- matrixcalc::elimination.matrix(n)
-  D <- t(E)
+  I_T <- Matrix::Diagonal(T0)
+  I_n <- Matrix::Diagonal(n)
+  I_q <- Matrix::Diagonal(len_beta)
+  I_nn <- Matrix::Diagonal(n^2)
+  I_qq <- Matrix::Diagonal(len_beta^2)
+  K_nn <- as(matrixcalc::commutation.matrix(n, n), "dgCMatrix")
+  K_qq <- as(matrixcalc::commutation.matrix(len_beta), "dgCMatrix")
+  K_nT <- as(matrixcalc::commutation.matrix(n, T0), "dgCMatrix")
+  elimL <- as(matrixcalc::elimination.matrix(len_beta), "dgCMatrix")
+  E <- as(matrixcalc::elimination.matrix(n), "dgCMatrix")
+  D <- Matrix::t(E)
 
-  vec_I_T <- matrixcalc::vec(I_T)
-  XT_otimes_XT <- t(X) %x% t(X)
-  y_T_otimes_X_T <- t(y) %x% t(X)
+  vec_I_T <- as.numeric(I_T)
+  tX <- t(X)
+  XT_otimes_XT <- as(tX %x% tX, "dgCMatrix")
+  y_T_otimes_X_T <- t(y) %x% tX
   IT_KnT_In <- I_T %x% K_nT %x% I_n
   n_ivt_otimes_iv <- neg_tx_otimes_x(inv_V)
-  b_0_T_otimes_I_q <- t(b_0) %x% I_q
+  b_0_T_otimes_I_q <- as(t(b_0) %x% I_q, "dgCMatrix")
+  I_nn_p_K_nn <- I_nn + K_nn
 
-  hyperparameter <- c("d_b0", "d_V0", "d_nu0", "d_S0", "d_Sigma0")
+  hyperparameter <- c("d_b0", "d_V", "d_nu0", "d_S0", "d_Sigma0")
   d_Sigma <- init_VAR_differential(n^2, len_beta, n)
   d_Sigma$d_Sigma0 <- I_nn
 
@@ -71,21 +73,21 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   deriv_Kg <- function(d_Ag) {
     expr <- . %>% {XT_otimes_XT %*% d_Ag[[.]]}
     d_Kg <- apply_chain(expr)
-    d_Kg$d_V0 <- d_Kg$d_V0 + n_ivt_otimes_iv
+    d_Kg$d_V <- d_Kg$d_V + n_ivt_otimes_iv
     d_Kg
   }
   deriv_bg <- function(inv_K_g, d_Kg, A_g, d_Ag) {
-    fac_1 <- (t(inv_V_times_b_0 + t(X) %*% A_g %*% y) %x% I_q) %*% neg_tx_otimes_x(inv_K_g)
+    fac_1 <- (Matrix::t(inv_V_times_b_0 + tX %*% A_g %*% y) %x% I_q) %*% neg_tx_otimes_x(inv_K_g)
     fac_2 <- b_0_T_otimes_I_q %*% n_ivt_otimes_iv
     fac_3 <- y_T_otimes_X_T
     expr <- . %>% {fac_1 %*% d_Kg[[.]] + inv_K_g %*% (fac_3 %*% d_Ag[[.]])}
     d_bg <- apply_chain(expr)
     d_bg$d_b0 <- d_bg$d_b0 + inv_K_g %*% inv_V
-    d_bg$d_V0 <- d_bg$d_V0 + inv_K_g %*% fac_2
+    d_bg$d_V <- d_bg$d_V + inv_K_g %*% fac_2
     d_bg
   }
   deriv_beta <- function(inv_Sigma_g, d_Sigma, inv_K_g, L, z) {
-    fac_1 <- t(elimL) %*% solve(elimL %*% (I_qq + K_qq) %*% (L %x% I_q) %*% t(elimL)) %*% elimL
+    fac_1 <- Matrix::t(elimL) %*% solve(elimL %*% (I_qq + K_qq) %*% (L %x% I_q) %*% Matrix::t(elimL)) %*% elimL
     fac_2 <- (t(z) %x% I_q) %*% fac_1 %*% neg_tx_otimes_x(inv_K_g)
     A_g <- I_T %x% inv_Sigma_g
 
@@ -125,7 +127,8 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     res <- 0
     for (t in 1:T0) {
       ls <- (1 + n*(t-1)) : (n*t)
-      res <- res + (I_n %x% m_vec[ls] + m_vec[ls] %x% I_n) %*% (-X[ls,])
+      res <- res + kronecker_sp_2(matrix(m_vec[ls]), -X[ls,]) +
+        kronecker_sp_3(matrix(m_vec[ls]), -X[ls,])
     }
     res
   }
@@ -133,14 +136,15 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     d_B <- deriv_B()
     sum_term <- find_sum_term(beta_g)
     RB <- R %*% B
-    fac_1 <- (I_nn + K_nn) %*% ((RB %*% t(B)) %x% I_n) %*%
-      (D %*% solve(E %*% (I_nn + K_nn) %*% (R %x% I_n) %*% D) %*% E) %*%
+    fac_1 <- I_nn_p_K_nn %*% ((RB %*% t(B)) %x% I_n) %*%
+      (D %*% solve(E %*% I_nn_p_K_nn %*% (R %x% I_n) %*% D) %*% E) %*%
       sum_term
-    fac_2 <- (I_nn + K_nn) %*% (RB %x% R)
+    fac_2 <- I_nn_p_K_nn %*% (RB %x% R)
     expr <- . %>% {fac_1 %*% d_beta[[.]] + fac_2 %*% d_B[[.]]}
     d_Sigma <- apply_chain(expr)
-    fac_1b <- (I_nn + K_nn) %*% ((RB %*% t(B)) %x% I_n) %*%
-      (D %*% solve(E %*% (I_nn + K_nn) %*% (R %x% I_n) %*% D) %*% E) %*%
+    # maybe optimise later
+    fac_1b <- I_nn_p_K_nn %*% ((RB %*% t(B)) %x% I_n) %*%
+      (D %*% solve(E %*% I_nn_p_K_nn %*% (R %x% I_n) %*% D) %*% E) %*%
       (I_nn + sum_term %*% d_beta$d_S0)
     d_Sigma$d_S0 <- fac_1b  + fac_2 %*% d_B$d_S0
     d_Sigma
@@ -156,7 +160,7 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   for (i in 1:num_steps) {
     # Update beta
     inv_Sigma_g <- solve(Sigma_g)
-    tX_fac <- t(X) %*% (I_T %x% inv_Sigma_g)
+    tX_fac <- tX %*% (I_T %x% inv_Sigma_g)
     K_g <- inv_V + tX_fac %*% X
     inv_K_g <- solve(K_g)
     b_g <- inv_K_g %*% (inv_V_times_b_0 + tX_fac %*% y)
@@ -186,7 +190,7 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   tidy_format <- . %>% tail(keep) %>% do.call(rbind, .)
   list(
     Sigma = runs_param %>% purrr::map(~as.numeric(.x$Sigma)) %>% tidy_format(),
-    beta = runs_param %>% purrr::map(~.x$beta) %>% tidy_format(),
+    beta = runs_param %>% purrr::map(~Matrix::t(.x$beta)) %>% tidy_format(),
     d_Sigma = runs_d_Sigma %>% tail(keep) %>% tidy_VAR_differential(),
     d_beta = runs_d_beta %>% tail(keep) %>% tidy_VAR_differential()
   )
@@ -197,7 +201,7 @@ init_VAR_differential <- function(len0, q, n) {
   # len0 is the number of entries in the variable of interest.
   list(
     d_b0 = zeros(len0, q),
-    d_V0 = zeros(len0, q^2),
+    d_V = zeros(len0, q^2),
     d_nu0 = zeros(len0, 1),
     d_S0 = zeros(len0, n^2),
     d_Sigma0 = zeros(len0, n^2)
@@ -208,14 +212,14 @@ init_VAR_differential <- function(len0, q, n) {
 tidy_VAR_differential <- function(dlist0) {
   extract_rbind <- function(attr0) {
     dlist0 %>%
-      purrr::map(~t(matrixcalc::vec(.x[[attr0]]))) %>%
+      purrr::map(~as.numeric(.x[[attr0]])) %>%
       do.call(rbind, .)
   }
   list(
     d_b0 = extract_rbind("d_b0"),
-    d_V0 = extract_rbind("d_V"),
+    d_V = extract_rbind("d_V"),
     d_nu0 = extract_rbind("d_nu0"),
     d_S0 = extract_rbind("d_S0"),
-    d_Sigma0 = extract_rbind("d_Sigma")
+    d_Sigma0 = extract_rbind("d_Sigma0")
   )
 }
