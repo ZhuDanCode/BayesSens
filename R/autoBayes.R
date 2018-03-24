@@ -4,6 +4,7 @@
 #' @importFrom graphics hist par
 #' @importFrom utils tail setTxtProgressBar txtProgressBar
 #' @importFrom magrittr %>% %<>%
+#' @importFrom methods as
 utils::globalVariables(".")
 NULL
 
