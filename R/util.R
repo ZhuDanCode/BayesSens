@@ -23,13 +23,6 @@ zeros <- function(nr = 1, nc = 1) {
 }
 
 
-# Multiply a diagonal matrix by a matrix from the left without forming the
-# diagonal matrix, M %*% diag(vec0).
-left_multiply_D <- function(M, vec0) {
-  t(t(M) * as.numeric(vec0))
-}
-
-
 # Collect objects by attributes
 collect <- function(l0) {
   list_names <- names(l0[[1]])

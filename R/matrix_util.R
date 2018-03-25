@@ -1,3 +1,10 @@
+# Multiply a diagonal matrix by a matrix from the left without forming the
+# diagonal matrix, M %*% diag(vec0).
+left_multiply_D <- function(M, vec0) {
+  t(t(M) * as.numeric(vec0))
+}
+
+
 neg_tx_otimes_x <- function(A) {
   -t(A) %x% A
 }

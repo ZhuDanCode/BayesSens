@@ -1,4 +1,4 @@
-#' Simulation data from a Vector AutoRegressive (VAR) model
+#' Simulate data from a Vector AutoRegressive (VAR) model
 #' @param m integer; number of datapoints.
 #' @param n integer; dimension of the observation.
 #' @param p integer; the time-series lag.
@@ -42,46 +42,6 @@ project_ts <- function(b, B, y_t, Sigma) {
 stationary_matrix <- function(k, upper_bound = 1) {
   res <- svd(pdmatrix(k)$Sigma)
   res$u %*% diag(upper_bound * res$d / max(res$d)) %*% t(res$v)
-}
-
-
-# VAR util functions
-#' Vectorise all the coefficients appeared in the model
-#' @param model0 A VAR model; the second component of the output from 'simulate_VAR'.
-#' @export
-VAR_model_to_vec <- function(model0) {
-  matrixcalc::vec(t(cbind(model0$b_0, do.call(cbind, model0$B))))
-}
-
-#' Convert vector back to model coefficients
-#' @param vec0 Numeric vector; vectorised model coefficients.
-#' @param n integer; dimension of the data.
-#' @export
-VAR_vec_to_model_coeff <- function(vec0, n) {
-  m0 <- matrix(vec0, ncol = n, byrow = F)
-  s <- seq(2, nrow(m0), n)
-  list(
-    b_0 = m0[1,],
-    B = purrr::map2(s, s+n-1, ~t(m0[.x:.y, , drop = F]))
-  )
-}
-
-
-#' Convert the data into a format ready for modelling
-#' @param data0 Matrix; the number of columns is equal to the number of time points,
-#' the number of rows is equal to the dimension of the observation. One can get
-#' such data from the first component of the output from 'simulate_VAR'.
-#' @param p integer; time series lag.
-#' @export
-VAR_model_matrix <- function(data0, p) {
-  eff_T <- ncol(data0) - p
-  n <- nrow(data0)
-  I_n <- diag(n)
-  purrr::map2(
-    .x = seq(eff_T), .y = p + seq(eff_T) - 1,
-    .f = ~ I_n %x% t( c(1, matrixcalc::vec(data0[, .y:.x, drop = F])) )
-  ) %>%
-    do.call(rbind, .)
 }
 
 
@@ -147,20 +107,7 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   )
 }
 
-
 residuals_cov <- function(y, X, beta_g, n) {
   tmp <- matrix(y - X %*% beta_g, nrow = n, byrow = F)
   tmp %*% t(tmp)
-}
-
-
-#' Compute the posterior mean of the parameters
-#' @param model0 Output from 'VAR_Gibbs'.
-#' @param n integer; dimension of the data.
-#' @param p integer; lag of the time series model.
-#' @export
-param_posterior_mean <- function(model0, n, p) {
-  res <- VAR_vec_to_model_coeff(apply(model0$beta, 2 , mean), p)
-  res$Sigma <- matrix(apply(model0$Sigma, 2 , mean), n, n)
-  res
 }
