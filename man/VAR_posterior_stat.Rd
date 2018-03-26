@@ -4,14 +4,12 @@
 \alias{VAR_posterior_stat}
 \title{Compute the posterior statistics of the parameters}
 \usage{
-VAR_posterior_stat(model0, n, p, fun = mean)
+VAR_posterior_stat(model0, n, fun = mean)
 }
 \arguments{
 \item{model0}{Output from 'VAR_Gibbs'.}
 
 \item{n}{integer; dimension of the data.}
-
-\item{p}{integer; lag of the time series model.}
 
 \item{fun}{function; statistical function, default set to be 'mean'.}
 }

@@ -114,3 +114,66 @@ for (i in 1:min(ncol(LR_estimates), 10)) {
   # if (readline("Continue? Y or N: ") == "N") break
 }
 ```
+
+
+## Fitted values and Forecast
+```{r}
+# Simulate and fit data, this part is the same as what we saw above.
+num_data <- 300
+dim_data <- 2
+lag <- 2
+converted_dim <- dim_data + dim_data^2 * lag
+
+sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
+data0 <- sim$data
+res <- VAR_Gibbs(data0, p = lag, 
+          b_0 = rnorm(converted_dim), V = pdmatrix(converted_dim)$Sigma, 
+          v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma,
+          num_steps = 1e4, burn_ins = 1e3)
+
+# Extract fitted parameter
+fitted_param <- colMeans(res$beta) %>% VAR_vec_to_model_coeff(lag)
+data1 <- fitted_VAR(data0, b_0 = fitted_param$b_0, B = fitted_param$B)
+
+# Plot original data with fitted values
+par(mfrow = c(1, 2))
+plot_mts(data0, xlab = "time", ylab = "index", main = "Data")
+plot_mts(data1, xlab = "time", ylab = "index", main = "Fitted values")
+par(mfrow = c(1, 1))
+
+# Forecast
+data2 <- predict_VAR(50, data0, b_0 = fitted_param$b_0, B = fitted_param$B)
+plot_mts(data2, xlab = "time", ylab = "index", main = "Forecast")
+
+# Forecast with bands
+posterior_density <- VAR_posterior_forecast(50, data0, res)
+means <- summarise_forecast(posterior_density, mean)
+bands <- summarise_forecast(posterior_density, quantile, probs = c(0.1, 0.9))
+
+# Nice plots
+library(ggplot2)
+library(ggthemes)
+
+src_data <- reshape2::melt(data0) %>% 
+  purrr::set_names(c("series_id", "time", "value"))
+plot_data <- means %>% 
+  purrr::map(~t(matrix(.x))) %>% 
+  reshape2::melt() %>% 
+  dplyr::select(-Var1) %>% 
+  purrr::set_names(c("time", "value", "series_id"))
+plot_data$time <- plot_data$time + ncol(data0)
+band_data <- reshape2::melt(bands) %>% 
+  purrr::set_names(c("quantile", "time", "value", "series_id")) %>%
+  tidyr::spread("quantile", "value")
+band_data$time <- band_data$time + ncol(data0)
+tmp_data <- src_data %>% 
+  rbind(plot_data) %>% 
+  dplyr::left_join(band_data, by = c("series_id", "time"))
+names(tmp_data)[4:5] <- c("lbd", "ubd")
+ggplot(tmp_data, aes(x = time, y = value, group = series_id)) + 
+  geom_line() + theme_economist() +
+  geom_ribbon(aes(x = time, ymin = lbd, ymax = ubd), alpha = 0.4) + 
+  labs(title = "Vector-Auto-Regressive (VAR) Model", 
+       x = "Time", y = "Index")
+
+```
