@@ -5,6 +5,7 @@
 #' @importFrom utils tail setTxtProgressBar txtProgressBar
 #' @importFrom magrittr %>% %<>%
 #' @importFrom methods as
+#' @importFrom graphics lines plot
 utils::globalVariables(".")
 NULL
 

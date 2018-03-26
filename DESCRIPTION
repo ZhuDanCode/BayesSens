@@ -1,7 +1,7 @@
 Package: BayesSense
 Type: Package
 Title: Sensitivity analysis for Bayesian Inference
-Version: 0.2.1
+Version: 0.2.2
 Author: Liana Jacobi <ljacobi@unimelb.edu.au>, 
     Dan Zhu <dan.zhu@monash.edu>, 
     Chun Fung Kwok <kwokcf@unimelb.edu.au>,
