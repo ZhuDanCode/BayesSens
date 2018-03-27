@@ -80,31 +80,14 @@ VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   keep <- num_steps - burn_ins
   res <- vector("list", num_steps)
 
-  update_helper <- function(X, y, inv_Sigma_g) {
-    resX <- 0
-    resY <- 0
-    for (i in seq(1, nrow(X), n)) {
-      m0 <- X[i:(i+n-1), ]
-      m1 <- y[i:(i+n-1)]
-      t_m0_times_inv_Sigma_g <- t(m0) %*% inv_Sigma_g
-      resX <- resX + t_m0_times_inv_Sigma_g %*% m0
-      resY <- resY + t_m0_times_inv_Sigma_g %*% m1
-    }
-    list(resX = resX, resY = resY)
-  }
-
   pb <- txtProgressBar(1, num_steps, style = 3)
   for (i in 1:num_steps) {
     # Update beta
     inv_Sigma_g <- solve(Sigma_g)
-    # tX_fac <- kronecker_sp_1(tX, inv_Sigma_g)
-    # K_g <- inv_V + tX_fac %*% X
-    # inv_K_g <- solve(K_g)
-    # b_g <- inv_K_g %*% (inv_V_times_b_0 + tX_fac %*% y)
-    tmpEVAL <- update_helper(X, y, inv_Sigma_g)
-    K_g <- inv_V + tmpEVAL$resX
+    tX_fac <- kronecker_sp_1(tX, inv_Sigma_g)
+    K_g <- inv_V + tX_fac %*% X
     inv_K_g <- solve(K_g)
-    b_g <- inv_K_g %*% (inv_V_times_b_0 + tmpEVAL$resY)
+    b_g <- inv_K_g %*% (inv_V_times_b_0 + tX_fac %*% y)
     beta_g <- MASS::mvrnorm(1, b_g, inv_K_g)
 
     # Update Sigma
