@@ -48,66 +48,100 @@ stationary_matrix <- function(k, upper_bound = 1) {
 # Inference
 #' Model inference for Bayesian Vector-AutoRegressive (VAR) model with
 #' normal-inverse-Wishart priors.
-#' @param data0 A numeric matrix; a multivariate time series. The number
-#' of columns is equal to the number of time points, the number of rows is
-#' equal to the dimension of the observation. One can get such data from
-#' the first component of the output from 'simulate_VAR'.
-#' @param p integer; lag of the time series model.
+#' @param Y Matrix; each row is one observation, each column is one measurement / predictor.
+#' @param X Matrix;
+#' @param lag Integer; the lag of the time series model.
+#' @param b_0 Vector; the intercept
 #' @param b_0 A numeric vector; the mean for the multivariate normal prior.
-#' @param V A numeric matrix; the covariance for the multivariate normal prior.
+#' @param B_0 A numeric matrix; the covariance for the multivariate normal prior.
 #' @param v_0 scalar; degree of freedom for the inverse-Wishart prior.
 #' @param S_0 matrix; the scale matrix for the inverse-Wishart prior.
 #' @param init_Sigma (Optional) matrix; the starting value of the noise covariance.
 #' @param num_steps integer; number of MCMC steps.
 #' @param burn_ins integer; number of burn-ins.
-#' @export
-VAR_Gibbs <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
-                      num_steps = 1e4, burn_ins = 1e3) {
-  if (missing(init_Sigma))
-    init_Sigma <- MCMCpack::riwish(v_0, S_0)
+VAR_Gibbs_2 <- function(Y, X, lag, b_0, B_0, v_0, S_0, init_Sigma,
+                        num_steps = 3e3, burn_ins = 1e3) {
+  T0 <- nrow(Y)
+  n <- ncol(Y)
+  p <- lag
 
-  # Initialisation
-  T0 <- ncol(data0) - p
-  n <- nrow(data0)
-  y <- matrixcalc::vec(data0[,seq(T0) + p])
-  X <- VAR_model_matrix(data0, p)
-  tX <- t(X)
-  inv_V <- solve(V)
-  Sigma_g <- init_Sigma
-  inv_V_times_b_0 <- inv_V %*% b_0
+  K <- 1 + n * p
+  d <- n * K
+
+  invB <- solve(B_0)
+  invVb <- invB %*% b_0
   v_1 <- v_0 + T0
+  Sigma <- init_Sigma
 
-  keep <- num_steps - burn_ins
-  res <- vector("list", num_steps)
+  XTX <- t(X) %*% X
+  XTY <- t(X) %*% Y
+  YTY <- t(Y) %*% Y
+
+  total <- num_steps + burn_ins
+  Z <- matrix(rnorm(d * total), d, total)
+  Z2 <- array(rnorm(n * n * total), dim = c(n, n, total))
+  C <- matrix(0, n, total)
+  for (i in 1:n) {
+    C[i,] <- rchisq(total, v_1 - i + 1)
+  }
+  C <- sqrt(C)
+  res_beta <- matrix(0, total, length(b_0))
+  res_sigma <- matrix(0, total, length(init_Sigma))
+
+  get_lower_tri <- . %>% {.[upper.tri(., T)] <- 0; .}
 
   pb <- txtProgressBar(1, num_steps, style = 3)
-  for (i in 1:num_steps) {
+  for (i in 1:total) {
     # Update beta
-    inv_Sigma_g <- solve(Sigma_g)
-    tX_fac <- kronecker_sp_1(tX, inv_Sigma_g)
-    K_g <- inv_V + tX_fac %*% X
-    inv_K_g <- solve(K_g)
-    b_g <- inv_K_g %*% (inv_V_times_b_0 + tX_fac %*% y)
-    beta_g <- MASS::mvrnorm(1, b_g, inv_K_g)
+    Vg <- solve(invB + kronecker(Sigma, XTX))
+    bg <- Vg %*% (invVb + as.numeric(XTY %*% Sigma))
+    beta_g <- bg + t(chol(Vg)) %*% Z[,i]
 
     # Update Sigma
-    S_g <- S_0 + residuals_cov(y, X, beta_g, n)
-    Sigma_g <- MCMCpack::riwish(v_1, S_g)
+    b <- matrix(beta_g, K, n)
+    S <- S_0 + YTY - t(b) %*% XTY- t(t(b) %*% XTY) + t(b) %*% XTX %*% b
+    L <- t(chol(solve(S)))
+    A <- diag(C[, i]) + get_lower_tri(Z2[,,i])
+    LA <- L %*% A
+    Sigma <- LA %*% t(LA)
 
     # Keep track
-    res[[i]] <- list(beta = beta_g, Sigma = Sigma_g)
+    res_beta[i, ] <- beta_g
+    res_sigma[i, ] <- as.numeric(solve(Sigma))
     setTxtProgressBar(pb, i)
   }
-
-  # Tidy format
-  tidy_format <- . %>% tail(keep) %>% do.call(rbind, .)
-  list(
-    Sigma = res %>% purrr::map(~as.numeric(.x$Sigma)) %>% tidy_format(),
-    beta = res %>% purrr::map(~.x$beta) %>% tidy_format()
-  )
+  # Return
+  list(beta = res_beta, Sigma = res_sigma)
 }
 
-residuals_cov <- function(y, X, beta_g, n) {
-  tmp <- matrix(y - X %*% beta_g, nrow = n, byrow = F)
-  tmp %*% t(tmp)
+train_data <- function(Y, lag) {
+  nr <- nrow(Y)
+  nc <- ncol(Y)
+  X <- matrix(0, nr - lag, lag * nc)
+  for (i in 1:lag) {
+    X[, (1 + (i-1) * nc):(i * nc)] <- Y[(1 + lag - i):(nr - i), ]
+  }
+  list(X = cbind(1, X), Y = Y[(1 + lag):nr, ])
 }
+
+# Example / Unit test
+# X <- read.csv("../Bayesian MCMC Sensitivity/var paper/code/X.csv", header = F)
+# Y <- read.csv("../Bayesian MCMC Sensitivity/var paper/code/Y.csv", header = F)
+# Y <- matrix(unlist(Y), ncol = 3, byrow = T)
+# X <- cbind(1, as.matrix(X))
+#
+# n <- ncol(Y)
+# p <- 2
+# adj_dim <- n * (1 + n * p)
+# b_0 <- rnorm(adj_dim)
+# B_0 <- 0.1 * diag(adj_dim)
+# v_0 <- 3
+# S_0 <- 0.1 * diag(n)
+# init_Sigma <- 0.1 * diag(n)
+#
+# res <- VAR_Gibbs_2(Y, X, lag = 2, b_0, B_0, v_0, S_0, init_Sigma)
+#
+# sim <- simulate_VAR(m = 1000, n = 3, p = 2)
+# data0 <- train_data(t(sim$data), 2)
+# res <- VAR_Gibbs_2(data0$Y, data0$X, lag = 2, b_0, B_0, v_0, S_0, init_Sigma)
+#
