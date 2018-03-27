@@ -45,14 +45,18 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   E <- as(matrixcalc::elimination.matrix(n), "dgCMatrix")
   D <- Matrix::t(E)
 
-  vec_I_T <- as.numeric(I_T)
+  vec_I_T <- as(matrix(as.numeric(I_T)), "dgCMatrix")
   tX <- t(X)
   XT_otimes_XT <- as(tX %x% tX, "dgCMatrix")
-  y_T_otimes_X_T <- t(y) %x% tX
+  y_T_otimes_X_T <- as(t(y) %x% tX, "dgCMatrix")
   IT_KnT_In <- I_T %x% K_nT %x% I_n
   n_ivt_otimes_iv <- neg_tx_otimes_x(inv_V)
   b_0_T_otimes_I_q <- as(t(b_0) %x% I_q, "dgCMatrix")
+  d_bg_fac_2 <- b_0_T_otimes_I_q %*% n_ivt_otimes_iv
   I_nn_p_K_nn <- I_nn + K_nn
+  I_qq_p_K_qq <- I_qq + K_qq
+  elimL_x_I_qq_p_K_qq <- elimL %*% (I_qq_p_K_qq)
+  E_I_nn_p_K_nn <- E %*% I_nn_p_K_nn
 
   hyperparameter <- c("d_b0", "d_V", "d_nu0", "d_S0", "d_Sigma0")
   d_Sigma <- init_VAR_differential(n^2, len_beta, n)
@@ -76,9 +80,14 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     d_Kg$d_V <- d_Kg$d_V + n_ivt_otimes_iv
     d_Kg
   }
-  deriv_bg <- function(inv_K_g, d_Kg, A_g, d_Ag) {
-    fac_1 <- (Matrix::t(inv_V_times_b_0 + tX %*% A_g %*% y) %x% I_q) %*% neg_tx_otimes_x(inv_K_g)
-    fac_2 <- b_0_T_otimes_I_q %*% n_ivt_otimes_iv
+  deriv_bg <- function(inv_Sigma_g, inv_K_g, d_Kg, d_Ag) {
+    # A_g <- (I_T %x% inv_Sigma_g)
+    # fac_1 <- (Matrix::t(inv_V_times_b_0 + tX %*% A_g %*% y) %x% I_q) %*% neg_tx_otimes_x(inv_K_g)
+    fac_1 <- kronecker_sp_3_cpp(
+      t(as.numeric(inv_V_times_b_0 + kronecker_sp_1(tX, inv_Sigma_g) %*% y)),
+      neg_tx_otimes_x(inv_K_g)
+    )
+    fac_2 <- d_bg_fac_2
     fac_3 <- y_T_otimes_X_T
     expr <- . %>% {fac_1 %*% d_Kg[[.]] + inv_K_g %*% (fac_3 %*% d_Ag[[.]])}
     d_bg <- apply_chain(expr)
@@ -87,13 +96,20 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     d_bg
   }
   deriv_beta <- function(inv_Sigma_g, d_Sigma, inv_K_g, L, z) {
-    fac_1 <- Matrix::t(elimL) %*% solve(elimL %*% (I_qq + K_qq) %*% (L %x% I_q) %*% Matrix::t(elimL)) %*% elimL
-    fac_2 <- (t(z) %x% I_q) %*% fac_1 %*% neg_tx_otimes_x(inv_K_g)
-    A_g <- I_T %x% inv_Sigma_g
-
+    # fac_1 <- Matrix::t(elimL) %*%
+    #   solve(elimL %*% (I_qq_p_K_qq) %*% (L %x% I_q) %*% Matrix::t(elimL)) %*%
+    #   elimL
+    fac_1 <- Matrix::t(elimL) %*%
+      solve(
+        elimL_x_I_qq_p_K_qq %*%
+          kronecker_sp_3_cpp(as.matrix(L), as.matrix(Matrix::t(elimL)))
+      ) %*%
+      elimL
+    # fac_2 <- (t(z) %x% I_q) %*% fac_1 %*% neg_tx_otimes_x(inv_K_g)
+    fac_2 <- kronecker_sp_3_cpp(t(z), as.matrix(fac_1)) %*% neg_tx_otimes_x(inv_K_g)
     d_Ag <- deriv_Ag(inv_Sigma_g, d_Sigma)
     d_Kg <- deriv_Kg(d_Ag)
-    d_bg <- deriv_bg(inv_K_g, d_Kg, A_g, d_Ag)
+    d_bg <- deriv_bg(inv_Sigma_g, inv_K_g, d_Kg, d_Ag)
 
     expr <- . %>% {d_bg[[.]] + fac_2 %*% d_Kg[[.]]}
     d_beta <- apply_chain(expr)
@@ -128,7 +144,7 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     for (t in 1:T0) {
       ls <- (1 + n*(t-1)) : (n*t)
       res <- res + kronecker_sp_2(matrix(m_vec[ls]), -X[ls,]) +
-        kronecker_sp_3(matrix(m_vec[ls]), -X[ls,])
+        kronecker_sp_3_cpp(matrix(m_vec[ls]), -X[ls,])
     }
     res
   }
@@ -136,16 +152,20 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     d_B <- deriv_B()
     sum_term <- find_sum_term(beta_g)
     RB <- R %*% B
-    fac_1 <- I_nn_p_K_nn %*% ((RB %*% t(B)) %x% I_n) %*%
-      (D %*% solve(E %*% I_nn_p_K_nn %*% (R %x% I_n) %*% D) %*% E) %*%
-      sum_term
+    # fac_1 <- I_nn_p_K_nn %*% ((RB %*% t(B)) %x% I_n) %*%
+    #   (D %*% solve(E %*% I_nn_p_K_nn %*% (R %x% I_n) %*% D) %*% E) %*%
+    #   sum_term
+    fac_1_core <- I_nn_p_K_nn %*%
+      kronecker_sp_3_cpp(
+        as.matrix(RB %*% t(B)),
+        as.matrix((D %*% solve(E_I_nn_p_K_nn %*%
+                       kronecker_sp_3_cpp(as.matrix(R), as.matrix(D))) %*% E))
+      )
+    fac_1 <- fac_1_core %*% sum_term
     fac_2 <- I_nn_p_K_nn %*% (RB %x% R)
     expr <- . %>% {fac_1 %*% d_beta[[.]] + fac_2 %*% d_B[[.]]}
     d_Sigma <- apply_chain(expr)
-    # maybe optimise later
-    fac_1b <- I_nn_p_K_nn %*% ((RB %*% t(B)) %x% I_n) %*%
-      (D %*% solve(E %*% I_nn_p_K_nn %*% (R %x% I_n) %*% D) %*% E) %*%
-      (I_nn + sum_term %*% d_beta$d_S0)
+    fac_1b <- fac_1_core %*% (I_nn + sum_term %*% d_beta$d_S0)
     d_Sigma$d_S0 <- fac_1b  + fac_2 %*% d_B$d_S0
     d_Sigma
   }
@@ -160,7 +180,7 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
   for (i in 1:num_steps) {
     # Update beta
     inv_Sigma_g <- solve(Sigma_g)
-    tX_fac <- tX %*% (I_T %x% inv_Sigma_g)
+    tX_fac <- kronecker_sp_1(tX, inv_Sigma_g)
     K_g <- inv_V + tX_fac %*% X
     inv_K_g <- solve(K_g)
     b_g <- inv_K_g %*% (inv_V_times_b_0 + tX_fac %*% y)
@@ -180,7 +200,7 @@ VAR_AD <- function(data0, p, b_0, V, v_0, S_0, init_Sigma,
     d_Sigma <- deriv_Sigma(beta_g, d_beta, R, t(inv_A))
 
     # Keep track
-    runs_param[[i]] <- list(beta = beta_g, Sigma = Sigma_g)
+    runs_param[[i]] <- list(beta = as.numeric(beta_g), Sigma = Sigma_g)
     runs_d_beta[[i]] <- d_beta
     runs_d_Sigma[[i]] <- d_Sigma
     setTxtProgressBar(pb, i)
