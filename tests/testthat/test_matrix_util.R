@@ -43,7 +43,7 @@ testthat::test_that("test_matrix_special_form_3",{
     I_d <- diag(d)
     testthat::expect_equal(
       (B %x% I_d) %*% A,
-      kronecker_sp_3(B, A)
+      kronecker_sp_3_cpp(B, A)
     )
   }
 })

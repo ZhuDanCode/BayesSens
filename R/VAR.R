@@ -50,12 +50,11 @@ stationary_matrix <- function(k, upper_bound = 1) {
 #' normal-inverse-Wishart priors.
 #' @param data0 Matrix; each row is one observation, each column is one measurement / predictor.
 #' @param lag Integer; the lag of the time series model.
-#' @param b_0 Vector; the intercept
 #' @param b_0 A numeric vector; the mean for the multivariate normal prior.
 #' @param B_0 A numeric matrix; the covariance for the multivariate normal prior.
 #' @param v_0 scalar; degree of freedom for the inverse-Wishart prior.
 #' @param S_0 matrix; the scale matrix for the inverse-Wishart prior.
-#' @param init_Sigma (Optional) matrix; the starting value of the noise covariance.
+#' @param init_Sigma (Optional) matrix; the starting value of the noise inverse-covariance.
 #' @param num_steps integer; number of MCMC steps.
 #' @param burn_ins integer; number of burn-ins.
 #' @export

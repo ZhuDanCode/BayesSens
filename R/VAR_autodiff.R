@@ -1,8 +1,6 @@
 #' Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.
-#' @param Y Matrix; each row is one observation, each column is one measurement / predictor.
-#' @param X Matrix;
+#' @param data0 Matrix; each row is one observation, each column is one measurement / predictor.
 #' @param lag Integer; the lag of the time series model.
-#' @param b_0 Vector; the intercept
 #' @param b_0 A numeric vector; the mean for the multivariate normal prior.
 #' @param B_0 A numeric matrix; the covariance for the multivariate normal prior.
 #' @param v_0 scalar; degree of freedom for the inverse-Wishart prior.

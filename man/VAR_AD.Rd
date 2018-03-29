@@ -8,9 +8,11 @@ VAR_AD(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
   burn_ins = 1000)
 }
 \arguments{
+\item{data0}{Matrix; each row is one observation, each column is one measurement / predictor.}
+
 \item{lag}{Integer; the lag of the time series model.}
 
-\item{b_0}{Vector; the intercept}
+\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
 
 \item{B_0}{A numeric matrix; the covariance for the multivariate normal prior.}
 
@@ -23,12 +25,6 @@ VAR_AD(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
 \item{num_steps}{integer; number of MCMC steps.}
 
 \item{burn_ins}{integer; number of burn-ins.}
-
-\item{Y}{Matrix; each row is one observation, each column is one measurement / predictor.}
-
-\item{X}{Matrix;}
-
-\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
 }
 \description{
 Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.

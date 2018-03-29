@@ -13,7 +13,7 @@ VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
 
 \item{lag}{Integer; the lag of the time series model.}
 
-\item{b_0}{Vector; the intercept}
+\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
 
 \item{B_0}{A numeric matrix; the covariance for the multivariate normal prior.}
 
@@ -21,13 +21,11 @@ VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
 
 \item{S_0}{matrix; the scale matrix for the inverse-Wishart prior.}
 
-\item{init_Sigma}{(Optional) matrix; the starting value of the noise covariance.}
+\item{init_Sigma}{(Optional) matrix; the starting value of the noise inverse-covariance.}
 
 \item{num_steps}{integer; number of MCMC steps.}
 
 \item{burn_ins}{integer; number of burn-ins.}
-
-\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
 }
 \description{
 Model inference for Bayesian Vector-AutoRegressive (VAR) model with

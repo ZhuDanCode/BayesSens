@@ -1,9 +1,7 @@
-// [[Rcpp::depends(RcppArmadillo, RcppEigen)]]
-
-#include <RcppArmadillo.h>
 #include <RcppEigen.h>
-#include <Rcpp.h>
 using namespace Rcpp;
+// [[Rcpp::depends(RcppEigen)]]
+
 
 // [[Rcpp::export]]
 NumericMatrix kronecker_sp_3_cpp(NumericMatrix B, NumericMatrix A) {
@@ -21,23 +19,6 @@ NumericMatrix kronecker_sp_3_cpp(NumericMatrix B, NumericMatrix A) {
   return C;
 }
 
-
-// NumericMatrix kronecker_sp_2_cpp(NumericMatrix B, NumericMatrix A) {
-//   int nc = B.ncol();
-//   int nr = B.nrow();
-//   int n = A.nrow() / B.ncol();
-//   NumericMatrix C(B.nrow() * n, A.ncol());
-//   for (int i = 0; i < n; i++) {
-//     for (int j = 0; j < nr; j++) {
-//       for (int k = 0; k < nc; k++) {
-//         for (int s = 0; s < ; s++) {
-//           C[(1+(i-1)*nr):(i*nr), ] = B(j,k) %*% A[(1+(i-1)*nc):(i*nc), , drop = F];
-//         }
-//       }
-//     }
-//   }
-//   C
-// }
 
 // [[Rcpp::export]]
 SEXP eigenMapMatMult(const Eigen::Map<Eigen::MatrixXd> A, Eigen::Map<Eigen::MatrixXd> B){

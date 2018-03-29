@@ -1,7 +1,7 @@
 Package: BayesSense
 Type: Package
 Title: Sensitivity analysis for Bayesian Inference
-Version: 0.2.2
+Version: 0.2.4
 Author: Liana Jacobi <ljacobi@unimelb.edu.au>, 
     Dan Zhu <dan.zhu@monash.edu>, 
     Chun Fung Kwok <kwokcf@unimelb.edu.au>,
@@ -25,5 +25,9 @@ Imports: purrr,
     assertthat,
     MCMCpack,
     Matrix,
-    methods
+    methods,
+    Rcpp,
+    RcppEigen
 VignetteBuilder: knitr
+LinkingTo: Rcpp, 
+    RcppEigen
