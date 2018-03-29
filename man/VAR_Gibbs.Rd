@@ -5,20 +5,17 @@
 \title{Model inference for Bayesian Vector-AutoRegressive (VAR) model with
 normal-inverse-Wishart priors.}
 \usage{
-VAR_Gibbs(data0, p, b_0, V, v_0, S_0, init_Sigma, num_steps = 10000,
+VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
   burn_ins = 1000)
 }
 \arguments{
-\item{data0}{A numeric matrix; a multivariate time series. The number
-of columns is equal to the number of time points, the number of rows is
-equal to the dimension of the observation. One can get such data from
-the first component of the output from 'simulate_VAR'.}
+\item{data0}{Matrix; each row is one observation, each column is one measurement / predictor.}
 
-\item{p}{integer; lag of the time series model.}
+\item{lag}{Integer; the lag of the time series model.}
 
-\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
+\item{b_0}{Vector; the intercept}
 
-\item{V}{A numeric matrix; the covariance for the multivariate normal prior.}
+\item{B_0}{A numeric matrix; the covariance for the multivariate normal prior.}
 
 \item{v_0}{scalar; degree of freedom for the inverse-Wishart prior.}
 
@@ -29,6 +26,8 @@ the first component of the output from 'simulate_VAR'.}
 \item{num_steps}{integer; number of MCMC steps.}
 
 \item{burn_ins}{integer; number of burn-ins.}
+
+\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
 }
 \description{
 Model inference for Bayesian Vector-AutoRegressive (VAR) model with

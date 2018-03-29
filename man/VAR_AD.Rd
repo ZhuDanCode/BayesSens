@@ -4,30 +4,31 @@
 \alias{VAR_AD}
 \title{Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.}
 \usage{
-VAR_AD(data0, p, b_0, V, v_0, S_0, init_Sigma, num_steps = 10000,
+VAR_AD(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
   burn_ins = 1000)
 }
 \arguments{
-\item{data0}{A numeric matrix; a multivariate time series. The number
-of columns is equal to the number of time points, the number of rows is
-equal to the dimension of the observation. One can get such data from
-the first component of the output from 'simulate_VAR'.}
+\item{lag}{Integer; the lag of the time series model.}
 
-\item{p}{integer; lag of the time series model.}
+\item{b_0}{Vector; the intercept}
 
-\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
-
-\item{V}{A numeric matrix; the covariance for the multivariate normal prior.}
+\item{B_0}{A numeric matrix; the covariance for the multivariate normal prior.}
 
 \item{v_0}{scalar; degree of freedom for the inverse-Wishart prior.}
 
 \item{S_0}{matrix; the scale matrix for the inverse-Wishart prior.}
 
-\item{init_Sigma}{(Optional) matrix; the starting value of the noise covariance.}
+\item{init_Sigma}{(Optional) matrix; the starting value of the noise inverse-covariance.}
 
 \item{num_steps}{integer; number of MCMC steps.}
 
 \item{burn_ins}{integer; number of burn-ins.}
+
+\item{Y}{Matrix; each row is one observation, each column is one measurement / predictor.}
+
+\item{X}{Matrix;}
+
+\item{b_0}{A numeric vector; the mean for the multivariate normal prior.}
 }
 \description{
 Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.

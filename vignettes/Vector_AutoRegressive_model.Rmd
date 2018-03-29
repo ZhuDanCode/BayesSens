@@ -42,30 +42,31 @@ VAR_vec_to_model_coeff(vec0, n = 2)
 Next, we introduce the function for inference, `VAR_Gibbs`.
 ```{r, results='hide'}
 # set.seed(345)
-num_data <- 300
-dim_data <- 2
+num_data <- 10000
+dim_data <- 3
 lag <- 2
 converted_dim <- dim_data + dim_data^2 * lag
 
-sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
-data0 <- sim$data
-res <- VAR_Gibbs(data0, p = lag, 
-          b_0 = rnorm(converted_dim), V = pdmatrix(converted_dim)$Sigma, 
-          v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma,
-          num_steps = 1e4, burn_ins = 1e3)
+sim <- simulate_VAR(m = num_data, n = dim_data, p = lag,
+                    B = list(s_eig_matrix(dim_data), s_eig_matrix(dim_data)))
+res <- VAR_Gibbs(sim$data, lag = lag, 
+        b_0 = rnorm(converted_dim), B_0 = pdmatrix(converted_dim)$Sigma, 
+        v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma, 
+        init_Sigma = pdmatrix(dim_data)$Sigma, 
+        num_steps = 3e4, burn_ins = 1e3)
 ```
 
 ```{r}
 # Compare estimated parameters with the true ones
 sim$model
-param_posterior_mean(res, dim_data, lag)
+VAR_posterior_stat(res, dim_data, fun = mean)
 ```
 
 
 Finally, we introduce the function for sensitivity analysis, `VAR_AD`.
 ```{r}
-num_data <- 30
-dim_data <- 2
+num_data <- 1000
+dim_data <- 3
 lag <- 2
 converted_dim <- dim_data + dim_data^2 * lag
 
@@ -73,10 +74,16 @@ sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
 data0 <- sim$data
 
 prior_cov <- pdmatrix(converted_dim)$Sigma
-res <- VAR_AD(data0, p = lag, 
-       b_0 = rnorm(converted_dim), V = prior_cov, 
-       v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma, 
-       num_steps = 1e3, burn_ins = 10)
+profile <- profvis::profvis({
+  res <- VAR_AD(data0, lag = lag, 
+         b_0 = rnorm(converted_dim), 
+         B_0 = prior_cov, 
+         v_0 = dim_data, 
+         S_0 = pdmatrix(dim_data)$Sigma, 
+         init_Sigma = diag(dim_data),
+         num_steps = 1e2, burn_ins = 1e1)
+})
+profile
 ```
 
 ## Comparison with the Likelihood-Ratio approach
@@ -126,34 +133,38 @@ converted_dim <- dim_data + dim_data^2 * lag
 
 sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
 data0 <- sim$data
-res <- VAR_Gibbs(data0, p = lag, 
-          b_0 = rnorm(converted_dim), V = pdmatrix(converted_dim)$Sigma, 
-          v_0 = dim_data, S_0 = pdmatrix(dim_data)$Sigma,
-          num_steps = 1e4, burn_ins = 1e3)
+res <- VAR_Gibbs(data0, lag = lag, 
+          b_0 = rnorm(converted_dim), 
+          B_0 = pdmatrix(converted_dim)$Sigma, 
+          v_0 = dim_data, 
+          S_0 = pdmatrix(dim_data)$Sigma,
+          init_Sigma = diag(dim_data),
+          num_steps = 5e4, burn_ins = 1e3)
 
 # Extract fitted parameter
 fitted_param <- colMeans(res$beta) %>% VAR_vec_to_model_coeff(lag)
-data1 <- fitted_VAR(data0, b_0 = fitted_param$b_0, B = fitted_param$B)
+data1 <- fitted_VAR(t(data0), b_0 = fitted_param$b_0, B = fitted_param$B)
 
 # Plot original data with fitted values
 par(mfrow = c(1, 2))
-plot_mts(data0, xlab = "time", ylab = "index", main = "Data")
+plot_mts(t(data0), xlab = "time", ylab = "index", main = "Data")
 plot_mts(data1, xlab = "time", ylab = "index", main = "Fitted values")
 par(mfrow = c(1, 1))
 
 # Forecast
-data2 <- predict_VAR(50, data0, b_0 = fitted_param$b_0, B = fitted_param$B)
+data2 <- predict_VAR(50, t(data0), b_0 = fitted_param$b_0, B = fitted_param$B)
 plot_mts(data2, xlab = "time", ylab = "index", main = "Forecast")
+```
 
+```{r}
 # Forecast with bands
-posterior_density <- VAR_posterior_forecast(50, data0, res)
+posterior_density <- VAR_posterior_forecast(50, t(data0), res)
 means <- summarise_forecast(posterior_density, mean)
 bands <- summarise_forecast(posterior_density, quantile, probs = c(0.1, 0.9))
 
 # Nice plots
 library(ggplot2)
 library(ggthemes)
-
 src_data <- reshape2::melt(data0) %>% 
   purrr::set_names(c("series_id", "time", "value"))
 plot_data <- means %>% 
@@ -175,5 +186,4 @@ ggplot(tmp_data, aes(x = time, y = value, group = series_id)) +
   geom_ribbon(aes(x = time, ymin = lbd, ymax = ubd), alpha = 0.4) + 
   labs(title = "Vector-Auto-Regressive (VAR) Model", 
        x = "Time", y = "Index")
-
 ```
