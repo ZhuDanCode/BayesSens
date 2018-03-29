@@ -28,7 +28,7 @@ simulate_VAR <- function(m, n, p, init_y_t, b_0, B, Sigma) {
     y_t[,i] <- project_ts(b_0, B, y_t[, (i+1):(i+p), drop = FALSE], Sigma)
   }
 
-  list(data = y_t[, rev(1:m)], model = list(b_0 = b_0, B = B, Sigma = Sigma))
+  list(data = t(y_t[, rev(1:m)]), model = list(b_0 = b_0, B = B, Sigma = Sigma))
 }
 
 project_ts <- function(b, B, y_t, Sigma) {
@@ -48,8 +48,7 @@ stationary_matrix <- function(k, upper_bound = 1) {
 # Inference
 #' Model inference for Bayesian Vector-AutoRegressive (VAR) model with
 #' normal-inverse-Wishart priors.
-#' @param Y Matrix; each row is one observation, each column is one measurement / predictor.
-#' @param X Matrix;
+#' @param data0 Matrix; each row is one observation, each column is one measurement / predictor.
 #' @param lag Integer; the lag of the time series model.
 #' @param b_0 Vector; the intercept
 #' @param b_0 A numeric vector; the mean for the multivariate normal prior.
@@ -59,8 +58,13 @@ stationary_matrix <- function(k, upper_bound = 1) {
 #' @param init_Sigma (Optional) matrix; the starting value of the noise covariance.
 #' @param num_steps integer; number of MCMC steps.
 #' @param burn_ins integer; number of burn-ins.
-VAR_Gibbs_2 <- function(Y, X, lag, b_0, B_0, v_0, S_0, init_Sigma,
+#' @export
+VAR_Gibbs <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
                         num_steps = 3e3, burn_ins = 1e3) {
+  data0 <- train_data(data0, lag)
+  Y <- data0$Y
+  X <- data0$X
+
   T0 <- nrow(Y)
   n <- ncol(Y)
   p <- lag
@@ -113,35 +117,3 @@ VAR_Gibbs_2 <- function(Y, X, lag, b_0, B_0, v_0, S_0, init_Sigma,
   # Return
   list(beta = res_beta, Sigma = res_sigma)
 }
-
-train_data <- function(Y, lag) {
-  nr <- nrow(Y)
-  nc <- ncol(Y)
-  X <- matrix(0, nr - lag, lag * nc)
-  for (i in 1:lag) {
-    X[, (1 + (i-1) * nc):(i * nc)] <- Y[(1 + lag - i):(nr - i), ]
-  }
-  list(X = cbind(1, X), Y = Y[(1 + lag):nr, ])
-}
-
-# Example / Unit test
-# X <- read.csv("../Bayesian MCMC Sensitivity/var paper/code/X.csv", header = F)
-# Y <- read.csv("../Bayesian MCMC Sensitivity/var paper/code/Y.csv", header = F)
-# Y <- matrix(unlist(Y), ncol = 3, byrow = T)
-# X <- cbind(1, as.matrix(X))
-#
-# n <- ncol(Y)
-# p <- 2
-# adj_dim <- n * (1 + n * p)
-# b_0 <- rnorm(adj_dim)
-# B_0 <- 0.1 * diag(adj_dim)
-# v_0 <- 3
-# S_0 <- 0.1 * diag(n)
-# init_Sigma <- 0.1 * diag(n)
-#
-# res <- VAR_Gibbs_2(Y, X, lag = 2, b_0, B_0, v_0, S_0, init_Sigma)
-#
-# sim <- simulate_VAR(m = 1000, n = 3, p = 2)
-# data0 <- train_data(t(sim$data), 2)
-# res <- VAR_Gibbs_2(data0$Y, data0$X, lag = 2, b_0, B_0, v_0, S_0, init_Sigma)
-#
