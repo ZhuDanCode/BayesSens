@@ -1,9 +1,3 @@
-push <- function(l0, item) {
-  l0[[length(l0) + 1]] <- item
-  l0
-}
-
-
 #' This is a function to generate covariance matrix.
 #' @details Alias for 'clusterGeneration::genPositiveDefMat'
 #' @param ... Parameters to be passed to 'genPositiveDefMat'.
@@ -15,6 +9,20 @@ push <- function(l0, item) {
 #' @export
 pdmatrix <- function(...) {
   clusterGeneration::genPositiveDefMat(...)
+}
+
+
+#' This is a function to generate matrix with eigenvalue less than 1 based on
+#' some heuristic.
+#' @param dim integer; dimension of the matrix.
+#' @examples
+#' # Create a random 4 x 4 matrix with eigenvalue less than 1.
+#' mat <- s_eig_matrix(4)
+#' print(mat)
+#' eigen(mat)$value
+#' @export
+s_eig_matrix <- function(dim) {
+  matrix(rnorm(dim^2), dim, dim) %*% diag(runif(dim, 0, 1/dim)) %*% matrix(rnorm(dim^2), dim, dim)
 }
 
 
