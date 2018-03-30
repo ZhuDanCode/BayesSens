@@ -175,8 +175,8 @@ d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n) {
   D_n <- Matrix::t(E_n)
   fac_1 <- E_n %*% (I_nn + K_nn)
   fac_2 <- D_n %*% solve(fac_1 %*% kronecker_sp_3_cpp(L, as.matrix(D_n))) %*% E_n
-  # apply_chain(. %>% {fac_2 %*% dA[[.]]})
-  apply_chain(. %>% {eigenMapMatMult(as.matrix(fac_2), dA[[.]])})
+  apply_chain(. %>% {fac_2 %*% dA[[.]]})
+  # apply_chain(. %>% {eigenMapMatMult(as.matrix(fac_2), dA[[.]])})
 }
 d_transpose <- function(X, dX, K_nq) {
   n <- nrow(X)
@@ -220,8 +220,8 @@ d_minus <- function(dA, dB) {
 }
 d_inv <- function(inv_A, dA) {
   fac_1 <- t(inv_A) %x% inv_A
-  # apply_chain(. %>% {fac_1 %*% dA[[.]]})
-  apply_chain(. %>% {eigenMapMatMult(fac_1, as.matrix(dA[[.]]))})
+  apply_chain(. %>% {fac_1 %*% dA[[.]]})
+  # apply_chain(. %>% {eigenMapMatMult(fac_1, as.matrix(dA[[.]]))})
 }
 d_Gamma <- function(g, alpha) {
   f <- function(t) { log(t) * dgamma(t, alpha, 1) }
