@@ -9,6 +9,7 @@
 utils::globalVariables(".")
 NULL
 
+
 #' Package 'BayesSense'
 #' @name BayesSense
 #' @title Sensitivity analysis for Bayesian Inference
@@ -19,6 +20,7 @@ NULL
 #' @description This package computes local derivatives of Bayesian outputs, e.g.
 #' MCMC posterior estimates and performance measures, via Automatic differentiation.
 NULL
+
 
 #' @useDynLib BayesSense
 #' @importFrom Rcpp sourceCpp

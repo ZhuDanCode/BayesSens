@@ -26,6 +26,7 @@ s_eig_matrix <- function(dim) {
 }
 
 
+# Create zero matrix
 zeros <- function(nr = 1, nc = 1) {
   matrix(numeric(nr * nc), nr, nc)
 }

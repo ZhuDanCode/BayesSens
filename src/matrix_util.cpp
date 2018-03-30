@@ -1,6 +1,6 @@
+// [[Rcpp::depends(RcppEigen)]]
 #include <RcppEigen.h>
 using namespace Rcpp;
-// [[Rcpp::depends(RcppEigen)]]
 
 
 // [[Rcpp::export]]
