@@ -75,7 +75,7 @@ data0 <- sim$data
 
 prior_cov <- pdmatrix(converted_dim)$Sigma
 profile <- profvis::profvis({
-  res <- VAR_AD(data0, lag = lag, 
+    res <- VAR_AD(data0, lag = lag, 
          b_0 = rnorm(converted_dim), 
          B_0 = prior_cov, 
          v_0 = dim_data, 

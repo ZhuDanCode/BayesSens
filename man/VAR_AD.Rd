@@ -2,7 +2,7 @@
 % Please edit documentation in R/VAR_autodiff.R
 \name{VAR_AD}
 \alias{VAR_AD}
-\title{Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.}
+\title{Sensitivity analysis for Vector-Auto-Regressive model with independent Normal-Wishart priors.}
 \usage{
 VAR_AD(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
   burn_ins = 1000)
@@ -27,5 +27,5 @@ VAR_AD(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
 \item{burn_ins}{integer; number of burn-ins.}
 }
 \description{
-Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.
+Sensitivity analysis for Vector-Auto-Regressive model with independent Normal-Wishart priors.
 }

@@ -1,4 +1,4 @@
-#' Sensitivity analysis for Vector-Auto-Regressive model with normal-Wishart priors.
+#' Sensitivity analysis for Vector-Auto-Regressive model with independent Normal-Wishart priors.
 #' @param data0 Matrix; each row is one observation, each column is one measurement / predictor.
 #' @param lag Integer; the lag of the time series model.
 #' @param b_0 A numeric vector; the mean for the multivariate normal prior.
@@ -8,6 +8,7 @@
 #' @param init_Sigma (Optional) matrix; the starting value of the noise inverse-covariance.
 #' @param num_steps integer; number of MCMC steps.
 #' @param burn_ins integer; number of burn-ins.
+#' @export
 VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
                      num_steps = 3e3, burn_ins = 1e3) {
   data0 <- train_data(data0, lag)
@@ -158,11 +159,12 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
 
 apply_chain <- function(expr_fun) {
   hyperparameter <- c("d_b0", "d_B0", "d_nu0", "d_S0", "d_Sigma0")
-  purrr::set_names(
-    purrr::map(hyperparameter, ~expr_fun(.x)),
-    hyperparameter
-  )
+  hyperparameter %>%
+    purrr::map(expr_fun) %>%
+    purrr::set_names(hyperparameter)
 }
+
+
 d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n) {
   # LL^T = A
   n <- nrow(L)

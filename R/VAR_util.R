@@ -1,3 +1,4 @@
+# Create training data given a time series
 train_data <- function(Y, lag) {
   nr <- nrow(Y)
   nc <- ncol(Y)
