@@ -59,7 +59,7 @@ res <- VAR_Gibbs(sim$data, lag = lag,
 ```{r}
 # Compare estimated parameters with the true ones
 sim$model
-VAR_posterior_stat(res, dim_data, fun = mean)
+VAR_posterior_stat(res, fun = mean)
 ```
 
 
@@ -74,16 +74,16 @@ sim <- simulate_VAR(m = num_data, n = dim_data, p = lag)
 data0 <- sim$data
 
 prior_cov <- pdmatrix(converted_dim)$Sigma
-profile <- profvis::profvis({
+# profile <- profvis::profvis({
     res <- VAR_AD(data0, lag = lag, 
          b_0 = rnorm(converted_dim), 
          B_0 = prior_cov, 
          v_0 = dim_data, 
          S_0 = pdmatrix(dim_data)$Sigma, 
          init_Sigma = diag(dim_data),
-         num_steps = 1e2, burn_ins = 1e1)
-})
-profile
+         num_steps = 5e2, burn_ins = 1e1)
+# })
+# profile
 ```
 
 ## Comparison with the Likelihood-Ratio approach

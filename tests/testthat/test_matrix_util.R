@@ -47,3 +47,25 @@ testthat::test_that("test_matrix_special_form_3",{
     )
   }
 })
+
+
+testthat::test_that("Commutation Matrix", {
+  for (i in 1:10) {
+    m <- sample(2:10, 1)
+    n <- sample(2:10, 1)
+    testthat::expect_equal(
+      commutation_matrix(m,n),
+      as(matrixcalc::commutation.matrix(m, n), "dgCMatrix")
+    )
+  }
+})
+
+test_that("Elimination matrix", {
+  for (i in 1:10) {
+    m <- sample(2:15, 1)
+    expect_equal(
+      elimination_matrix(m),
+      as(matrixcalc::elimination.matrix(m), "dgCMatrix")
+    )
+  }
+})

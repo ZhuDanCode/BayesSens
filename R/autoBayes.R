@@ -6,7 +6,7 @@
 #' @importFrom magrittr %>% %<>%
 #' @importFrom methods as
 #' @importFrom graphics lines plot
-utils::globalVariables(".")
+utils::globalVariables(c(".", "Var1", "Var2"))
 NULL
 
 
