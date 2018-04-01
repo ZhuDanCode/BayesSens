@@ -37,7 +37,19 @@ collect <- function(l0) {
   list_names <- names(l0[[1]])
   res <- vector("list", length(list_names))
   for (i in seq_along(list_names)) {
-    res[[i]] <- purrr::map(l0, ~.x[[list_names[i]]]) %>% do.call(rbind, .)
+    res[[i]] <- purrr::map(l0, ~.x[[list_names[i]]]) %>%
+      do.call(rbind, .)
+  }
+  purrr::set_names(res, list_names)
+}
+
+
+collect_and_reshape <- function(l0) {
+  list_names <- names(l0[[1]])
+  res <- vector("list", length(list_names))
+  for (i in seq_along(list_names)) {
+    res[[i]] <- purrr::map(l0, ~as.numeric(.x[[list_names[i]]])) %>%
+      do.call(rbind, .)
   }
   purrr::set_names(res, list_names)
 }

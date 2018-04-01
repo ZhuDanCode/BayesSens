@@ -154,8 +154,8 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
   # Return
   list(beta = res_beta %>% tail(num_steps),
        Sigma = res_sigma %>% tail(num_steps),
-       d_beta = runs_d_beta %>% tail(num_steps) %>% collect(),
-       d_Sigma = runs_d_Sigma %>% tail(num_steps) %>% collect())
+       d_beta = runs_d_beta %>% tail(num_steps) %>% collect_and_reshape(),
+       d_Sigma = runs_d_Sigma %>% tail(num_steps) %>% collect_and_reshape())
 }
 
 
