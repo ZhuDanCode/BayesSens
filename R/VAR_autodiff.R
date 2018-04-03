@@ -76,7 +76,9 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
   E_n <- elimination_matrix(nrow(S_0))
   K_XTX_Sigma <- commutation_matrix(ncol(XTX), nrow(invSigma))
   I_Sigma <- Matrix::Diagonal(ncol(invSigma))
+  I_Sigma2 <- Matrix::Diagonal(ncol(invSigma)^2)
   I_XTX <- Matrix::Diagonal(nrow(XTX))
+  I_XTX2 <- Matrix::Diagonal(nrow(XTX)^2)
   sks_xtx <- I_Sigma %x% K_XTX_Sigma %x% I_XTX
   EIK_mm <- E_m %*% (I_mm + K_mm)
   EIK_nn <- E_n %*% (I_nn + K_nn)
@@ -90,7 +92,8 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
     invSigma_x_XTX <- kronecker(invSigma, XTX)
     Vg <- solve(invB + invSigma_x_XTX)
 
-    d_invSigma_x_XTX <- d_kronecker(invSigma, d_invSigma, XTX, d_XTX, sks_xtx)
+    d_invSigma_x_XTX <- d_kronecker(invSigma, d_invSigma, XTX, d_XTX, sks_xtx,
+                                    I_Sigma2, I_XTX2)
     d_invB <- d_inv(invB, d_B0, tinvB_x_invB)
     d_invB_p_invSigma_x_XTX <- d_sum(d_invB, d_invSigma_x_XTX)
     inv_of_invB_p_invSigma_x_XTX <- Vg
@@ -128,13 +131,11 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
     Sigma <- solve(invSigma)
 
     d_B <- d_beta_g
-    d_tB_XTY <- d_product(tB, d_transpose(B, d_B), XTY, d_XTY)
+    d_tB <- d_transpose(B, d_B)
+    d_tB_XTY <- d_product(tB, d_tB, XTY, d_XTY)
     d_S <- d_S0 %>% d_sum(d_YTY) %>% d_minus(d_tB_XTY) %>%
       d_minus(d_transpose(tB_XTY, d_tB_XTY)) %>%
-      d_sum(d_product(
-        tB, d_transpose(B, d_B),
-        XTX_B, d_product(XTX, d_XTX, B, d_B)
-      ))
+      d_sum(d_product(tB, d_tB, XTX_B, d_product(XTX, d_XTX, B, d_B)))
     d_A <- init_deriv(length(A))
     d_A$d_nu0 <- matrix(as.numeric(diag(
       purrr::map_dbl(1:n, function(.x) {
@@ -179,8 +180,8 @@ apply_chain <- function(expr_fun) {
 d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n, fac_1) {
   # LL^T = A
   n <- nrow(L)
-  if (missing(I_n)) I_n <- diag(n)
-  if (missing(I_nn)) I_nn <- diag(n^2)
+  if (missing(I_n)) I_n <- Matrix::Diagonal(n)
+  if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
   if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
   if (missing(E_n)) E_n <- elimination_matrix(n)
   D_n <- Matrix::t(E_n)
@@ -198,30 +199,33 @@ d_transpose <- function(X, dX, K_nq) {
 }
 d_XXT <- function(X, dX, I_nn, K_nn, I_n) {
   n <- nrow(X)
-  if (missing(I_n)) I_n <- diag(n)
-  if (missing(I_nn)) I_nn <- diag(n^2)
+  if (missing(I_n)) I_n <- Matrix::Diagonal(n)
+  if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
   if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
   apply_chain(. %>% {(I_nn + K_nn) %*% (X %x% I_n) %*% dX[[.]]})
 }
-d_kronecker <- function(A, dA, B, dB, fac_1, I_n, K_qm, I_m) {
+d_kronecker <- function(A, dA, B, dB, fac_1, I_mn, I_pq, I_n, K_qm, I_p) {
   # apply_chain(. %>% {A %x% dB[[.]] + dA[[.]] %x% B})
   m <- nrow(A)
   n <- ncol(A)
   p <- nrow(B)
   q <- ncol(B)
   if (missing(fac_1)) {
-    if (missing(I_n)) I_n <- diag(n)
+    if (missing(I_n)) I_n <- Matrix::Diagonal(n)
     if (missing(K_qm)) K_qm <- commutation_matrix(q, m)
-    if (missing(I_m)) I_m <- diag(m)
-    fac_1 <- (I_n %x% K_qm %x% I_m)
+    if (missing(I_p)) I_p <- Matrix::Diagonal(p)
+    if (missing(I_mn)) I_mn <- Matrix::Diagonal(m*n)
+    if (missing(I_pq)) I_pq <- Matrix::Diagonal(p*q)
+    fac_1 <- (I_n %x% K_qm %x% I_p)
   }
   if (!is.list(dB) && (dB == 0)) {
-    return(apply_chain(. %>% {fac_1 %*% (dA[[.]] %x% as.numeric(B))}))
+    return(apply_chain(. %>% { fac_1 %*% ((I_mn %x% as.numeric(B)) %*% dA[[.]]) }))
   } else if (!is.list(dA) && (dA == 0)) {
-    return(apply_chain(. %>% {fac_1 %*% (as.numeric(A) %x% dB[[.]])}))
+    return(apply_chain(. %>% { fac_1 %*% ((as.numeric(A) %x% I_pq) %*% dB[[.]]) }))
   }
   apply_chain(. %>% {fac_1 %*%
-      (as.numeric(A) %x% dB[[.]] + dA[[.]] %x% as.numeric(B))})
+      ( (as.numeric(A) %x% I_pq) %*% dB[[.]] +
+          (I_mn %x% as.numeric(B)) %*% dA[[.]] )})
 }
 d_sum <- function(dA, dB) {
   if (!is.list(dB) && (dB == 0)) { return(dA) }
@@ -229,8 +233,8 @@ d_sum <- function(dA, dB) {
   apply_chain(. %>% {dA[[.]] + dB[[.]]})
 }
 d_product <- function(A, dA, B, dB, I_a, I_b) {
-  if (missing(I_a)) I_a <- diag(ifelse(is.vector(A), length(A), nrow(A)))
-  if (missing(I_b)) I_b <- diag(ifelse(is.vector(B), 1, ncol(B)))
+  if (missing(I_a)) I_a <- Matrix::Diagonal(ifelse(is.vector(A), length(A), nrow(A)))
+  if (missing(I_b)) I_b <- Matrix::Diagonal(ifelse(is.vector(B), 1, ncol(B)))
   if (!is.list(dB) && (dB == 0)) {
     return(apply_chain(. %>% {(t(B) %x% I_a) %*% dA[[.]]}))
   } else if (!is.list(dA) && (dA == 0)) {
@@ -240,6 +244,9 @@ d_product <- function(A, dA, B, dB, I_a, I_b) {
 }
 d_minus <- function(dA, dB) {
   if (!is.list(dB) && (dB == 0)) { return(dA) }
+  if (!is.list(dA) && (dA == 0)) {
+    return(apply_chain(. %>% {- dB[[.]]}))
+  }
   apply_chain(. %>% {dA[[.]] - dB[[.]]})
 }
 d_inv <- function(inv_A, dA, fac_1) {
