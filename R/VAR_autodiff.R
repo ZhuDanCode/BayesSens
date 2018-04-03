@@ -162,10 +162,10 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
             # round(as.numeric(Sys.time() - now, units = "mins") * (total - i), 3)))
   }
   # Return
-  list(beta = res_beta %>% tail(num_steps),
-       Sigma = res_sigma %>% tail(num_steps),
-       d_beta = runs_d_beta %>% tail(num_steps) %>% collect_and_reshape(),
-       d_Sigma = runs_d_Sigma %>% tail(num_steps) %>% collect_and_reshape())
+  list(beta = res_beta,
+       Sigma = res_sigma,
+       d_beta = runs_d_beta %>% collect_and_reshape(),
+       d_Sigma = runs_d_Sigma %>% collect_and_reshape())
 }
 
 
@@ -219,13 +219,20 @@ d_kronecker <- function(A, dA, B, dB, fac_1, I_mn, I_pq, I_n, K_qm, I_p) {
     fac_1 <- (I_n %x% K_qm %x% I_p)
   }
   if (!is.list(dB) && (dB == 0)) {
-    return(apply_chain(. %>% { fac_1 %*% ((I_mn %x% as.numeric(B)) %*% dA[[.]]) }))
+    return(apply_chain(. %>% { fac_1 %*% (dA[[.]] %x% as.numeric(B)) }))
+    # return(apply_chain(. %>% { fac_1 %*% ((I_mn %x% as.numeric(B)) %*% dA[[.]]) }))
+    # return(apply_chain(. %>% { fac_1 %*% (kronecker_sp_2(as.numeric(B), dA[[.]])) }))
   } else if (!is.list(dA) && (dA == 0)) {
-    return(apply_chain(. %>% { fac_1 %*% ((as.numeric(A) %x% I_pq) %*% dB[[.]]) }))
+    return(apply_chain(. %>% { fac_1 %*% (as.numeric(A) %x% dB[[.]]) }))
+    # return(apply_chain(. %>% { fac_1 %*% ((as.numeric(A) %x% I_pq) %*% dB[[.]]) }))
+    # return(apply_chain(. %>% { fac_1 %*% (kronecker_sp_3(as.numeric(A), dB[[.]])) }))
   }
   apply_chain(. %>% {fac_1 %*%
-      ( (as.numeric(A) %x% I_pq) %*% dB[[.]] +
-          (I_mn %x% as.numeric(B)) %*% dA[[.]] )})
+      ( as.numeric(A) %x% dB[[.]] + dA[[.]] %x% as.numeric(B) )})
+  # apply_chain(. %>% {fac_1 %*%
+      # ( (as.numeric(A) %x% I_pq) %*% dB[[.]] + (I_mn %x% as.numeric(B)) %*% dA[[.]] )})
+  # apply_chain(. %>% {fac_1 %*%
+      # ( kronecker_sp_3(as.numeric(A), dB[[.]]) + kronecker_sp_2(as.numeric(B), dA[[.]]) )})
 }
 d_sum <- function(dA, dB) {
   if (!is.list(dB) && (dB == 0)) { return(dA) }
