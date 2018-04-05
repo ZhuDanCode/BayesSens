@@ -85,7 +85,7 @@ predict_VAR <- function(n_step_ahead, data0, b_0, B) {
   data1 <- cbind(data0, matrix(0, nr, n_step_ahead))
   lag <- length(B)
   for (i in nc + seq(n_step_ahead)) {
-    data1[, i] <- fit(b_0, B, data1[, (i-lag):(i-1)])
+    data1[, i] <- fit(b_0, B, data1[, (i-1):(i-lag)])
   }
   data1
 }
@@ -102,7 +102,7 @@ fitted_VAR <- function(data0, b_0, B) {
   data1 <- data0
   lag <- length(B)
   for (i in (lag + 1):ncol(data0)) {
-    data1[,i] <- fit(b_0, B, data0[,(i-lag):(i-1)])
+    data1[,i] <- fit(b_0, B, data0[,(i-1):(i-lag)])
   }
   data1
 }
