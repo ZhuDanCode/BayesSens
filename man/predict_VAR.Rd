@@ -9,9 +9,7 @@ predict_VAR(n_step_ahead, data0, b_0, B)
 \arguments{
 \item{n_step_ahead}{integer; number of future forecast to generate.}
 
-\item{data0}{numeric matrix; the multivariate time series data.
-The matrix must have at least as many columns as the lag, and the first
-column should be the state at the first time point.}
+\item{data0}{Matrix; each row is one observation, each column is one measurement / predictor.}
 
 \item{b_0}{numeric vector; the intercept.}
 

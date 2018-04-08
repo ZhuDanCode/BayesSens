@@ -3,7 +3,7 @@
 \name{VAR_Gibbs}
 \alias{VAR_Gibbs}
 \title{Model inference for Bayesian Vector-AutoRegressive (VAR) model with
-normal-inverse-Wishart priors.}
+independent normal-inverse-Wishart priors.}
 \usage{
 VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
   burn_ins = 1000)
@@ -27,7 +27,27 @@ VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
 
 \item{burn_ins}{integer; number of burn-ins.}
 }
+\value{
+A list of two matrices. The first matrix contains the posterior samples
+of beta and the second matrix contains the posterior samples of Sigma. In both
+matrices, each row corresponding to 1 sample of the vectorised parameter.
+}
 \description{
 Model inference for Bayesian Vector-AutoRegressive (VAR) model with
-normal-inverse-Wishart priors.
+independent normal-inverse-Wishart priors.
+}
+\examples{
+sim <- simulate_VAR(m = 1000, 3, 2) # 1000 pts of 3-dimensional lag-2 time series
+data0 <- sim$data
+
+dim_data <- 3
+lag <- 2
+d <- dim_data + dim_data ^2 * lag  # dimension of the vectorised parameter
+
+res <- VAR_Gibbs(
+  data0, lag,
+  b_0 = rnorm(d), B_0 = pdmatrix(d)$Sigma,
+  v_0 = 3, S_0 = pdmatrix(dim_data)$Sigma,
+  init_Sigma = diag(dim_data)
+)
 }
