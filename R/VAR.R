@@ -43,6 +43,8 @@ VAR_Gibbs <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
   invB <- solve(B_0)
   invVb <- invB %*% b_0
   v_1 <- v_0 + T0
+  if (missing(init_Sigma))
+    init_Sigma <- MCMCpack::rwish(v_0, S_0)
   Sigma <- init_Sigma
 
   XTX <- t(X) %*% X
