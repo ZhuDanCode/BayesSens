@@ -7,7 +7,7 @@
 plot_mts(data0, x_axis, ...)
 }
 \arguments{
-\item{data0}{Numeric matrix; each row is one time series.}
+\item{data0}{Numeric matrix; each column is one time series.}
 
 \item{x_axis}{Vector (optional); the break of the axis.}
 
