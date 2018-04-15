@@ -47,9 +47,9 @@ VAR_Gibbs <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
     init_Sigma <- MCMCpack::rwish(v_0, S_0)
   Sigma <- init_Sigma
 
-  XTX <- t(X) %*% X
-  XTY <- t(X) %*% Y
-  YTY <- t(Y) %*% Y
+  XTX <- crossprod(X)
+  XTY <- crossprod(X, Y)
+  YTY <- crossprod(Y)
 
   total <- num_steps + burn_ins
   Z <- matrix(rnorm(d * total), d, total)

@@ -11,7 +11,7 @@ predict_VAR <- function(n_step_ahead, data0, b_0, B) {
   for (i in ncol(data0) + seq(n_step_ahead)) {
     data1[, i] <- fit(b_0, B, data1[, (i-1):(i-lag)])
   }
-  data1
+  t(data1)
 }
 
 
@@ -27,7 +27,7 @@ fitted_VAR <- function(data0, b_0, B) {
   for (i in (lag + 1):ncol(data0)) {
     data1[,i] <- fit(b_0, B, data0[, (i-1):(i-lag)])
   }
-  data1
+  t(data1)
 }
 
 

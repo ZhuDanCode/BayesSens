@@ -21,11 +21,10 @@ VAR_posterior_stat <- function(model0, fun = mean) {
 #' of the multivariate time series.
 #' @export
 VAR_posterior_forecast <- function(model0, data0, n_step_ahead) {
-  n <- sqrt(ncol(model0$Sigma))
-  last_n_cols <- function(m0, n) { m0 %>% t() %>% tail(n) %>% t() }
+  n <- ncol(data0)
   res <- 1:nrow(model0$beta) %>%
     purrr::map(~VAR_vec_to_model(model0$beta[.x, ], n)) %>%
-    purrr::map(~last_n_cols(
+    purrr::map(~tail(
       predict_VAR(n_step_ahead, data0, .x$b_0, .x$B),
       n_step_ahead
     ))
