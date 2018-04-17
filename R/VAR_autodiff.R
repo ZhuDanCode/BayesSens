@@ -7,10 +7,8 @@
 #' @param S_0 matrix; the scale matrix for the inverse-Wishart prior.
 #' @param init_Sigma (Optional) matrix; the starting value of the noise inverse-covariance.
 #' @param num_steps integer; number of MCMC steps.
-#' @param burn_ins integer; number of burn-ins.
 #' @export
-VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
-                     num_steps = 3e3, burn_ins = 1e3) {
+VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3e3) {
   data0 <- train_data(data0, lag)
   Y <- data0$Y
   X <- data0$X
@@ -33,7 +31,7 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
   XTY <- t(X) %*% Y
   YTY <- t(Y) %*% Y
 
-  total <- num_steps + burn_ins
+  total <- num_steps
   Z <- matrix(rnorm(d * total), d, total)
   Z2 <- array(rnorm(n * n * total), dim = c(n, n, total))
   C <- matrix(0, n, total)
@@ -158,7 +156,10 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
     res_beta[i, ] <- beta_g
     res_sigma[i, ] <- as.numeric(Sigma)
     runs_d_beta[[i]] <- d_beta_g
-    runs_d_Sigma[[i]] <- apply_chain(. %>% {d_Sigma_on_d_invSigma %*% d_invSigma[[.]]})
+    runs_d_Sigma[[i]] <- apply_chain(
+      . %>% {d_Sigma_on_d_invSigma %*% d_invSigma[[.]]},
+      names(d_invSigma)
+    )
     setTxtProgressBar(pb, i)
     # print(sprintf("\n Estimate time to completion: %f minutes\n",
             # round(as.numeric(Sys.time() - now, units = "mins") * (total - i), 3)))
@@ -168,104 +169,4 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
        Sigma = res_sigma,
        d_beta = runs_d_beta %>% collect_and_reshape(),
        d_Sigma = runs_d_Sigma %>% collect_and_reshape())
-}
-
-
-apply_chain <- function(expr_fun) {
-  hyperparameter <- c("d_b0", "d_B0", "d_nu0", "d_S0", "d_Sigma0")
-  hyperparameter %>%
-    purrr::map(expr_fun) %>%
-    purrr::set_names(hyperparameter)
-}
-
-
-d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n, fac_1) {
-  # LL^T = A
-  n <- nrow(L)
-  if (missing(I_n)) I_n <- Matrix::Diagonal(n)
-  if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
-  if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
-  if (missing(E_n)) E_n <- elimination_matrix(n)
-  D_n <- Matrix::t(E_n)
-  if (missing(fac_1)) fac_1 <- E_n %*% (I_nn + K_nn)
-  fac_2 <- as.matrix(
-    D_n %*% solve(fac_1 %*% kronecker_sp_3_cpp(L, as.matrix(D_n))) %*% E_n)
-  # apply_chain(. %>% {fac_2 %*% dA[[.]]})
-  apply_chain(. %>% {eigenMapMatMult(fac_2, dA[[.]])})
-}
-d_transpose <- function(X, dX, K_nq) {
-  n <- nrow(X)
-  q <- ncol(X)
-  if (missing(K_nq)) K_nq <- commutation_matrix(n, q)
-  apply_chain(. %>% {K_nq %*% dX[[.]]})
-}
-d_XXT <- function(X, dX, I_nn, K_nn, I_n) {
-  n <- nrow(X)
-  if (missing(I_n)) I_n <- Matrix::Diagonal(n)
-  if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
-  if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
-  apply_chain(. %>% {(I_nn + K_nn) %*% (X %x% I_n) %*% dX[[.]]})
-}
-d_kronecker <- function(A, dA, B, dB, fac_1, I_mn, I_pq, I_n, K_qm, I_p) {
-  # apply_chain(. %>% {A %x% dB[[.]] + dA[[.]] %x% B})
-  m <- nrow(A)
-  n <- ncol(A)
-  p <- nrow(B)
-  q <- ncol(B)
-  if (missing(fac_1)) {
-    if (missing(I_n)) I_n <- Matrix::Diagonal(n)
-    if (missing(K_qm)) K_qm <- commutation_matrix(q, m)
-    if (missing(I_p)) I_p <- Matrix::Diagonal(p)
-    if (missing(I_mn)) I_mn <- Matrix::Diagonal(m*n)
-    if (missing(I_pq)) I_pq <- Matrix::Diagonal(p*q)
-    fac_1 <- (I_n %x% K_qm %x% I_p)
-  }
-  if (!is.list(dB) && (dB == 0)) {
-    return(apply_chain(. %>% { fac_1 %*% (dA[[.]] %x% as.numeric(B)) }))
-    # return(apply_chain(. %>% { fac_1 %*% ((I_mn %x% as.numeric(B)) %*% dA[[.]]) }))
-    # return(apply_chain(. %>% { fac_1 %*% (kronecker_sp_2(as.numeric(B), dA[[.]])) }))
-  } else if (!is.list(dA) && (dA == 0)) {
-    return(apply_chain(. %>% { fac_1 %*% (as.numeric(A) %x% dB[[.]]) }))
-    # return(apply_chain(. %>% { fac_1 %*% ((as.numeric(A) %x% I_pq) %*% dB[[.]]) }))
-    # return(apply_chain(. %>% { fac_1 %*% (kronecker_sp_3(as.numeric(A), dB[[.]])) }))
-  }
-  apply_chain(. %>% {fac_1 %*%
-      ( as.numeric(A) %x% dB[[.]] + dA[[.]] %x% as.numeric(B) )})
-  # apply_chain(. %>% {fac_1 %*%
-      # ( (as.numeric(A) %x% I_pq) %*% dB[[.]] + (I_mn %x% as.numeric(B)) %*% dA[[.]] )})
-  # apply_chain(. %>% {fac_1 %*%
-      # ( kronecker_sp_3(as.numeric(A), dB[[.]]) + kronecker_sp_2(as.numeric(B), dA[[.]]) )})
-}
-d_sum <- function(dA, dB) {
-  if (!is.list(dB) && (dB == 0)) { return(dA) }
-  if (!is.list(dA) && (dA == 0)) { return(dB) }
-  apply_chain(. %>% {dA[[.]] + dB[[.]]})
-}
-d_product <- function(A, dA, B, dB, I_a, I_b) {
-  if (missing(I_a)) I_a <- Matrix::Diagonal(ifelse(is.vector(A), length(A), nrow(A)))
-  if (missing(I_b)) I_b <- Matrix::Diagonal(ifelse(is.vector(B), 1, ncol(B)))
-  if (!is.list(dB) && (dB == 0)) {
-    return(apply_chain(. %>% {(t(B) %x% I_a) %*% dA[[.]]}))
-  } else if (!is.list(dA) && (dA == 0)) {
-    return(apply_chain(. %>% {(I_b %x% A) %*% dB[[.]]}))
-  }
-  apply_chain(. %>% {(I_b %x% A) %*% dB[[.]] + (t(B) %x% I_a) %*% dA[[.]]})
-}
-d_minus <- function(dA, dB) {
-  if (!is.list(dB) && (dB == 0)) { return(dA) }
-  if (!is.list(dA) && (dA == 0)) {
-    return(apply_chain(. %>% {- dB[[.]]}))
-  }
-  apply_chain(. %>% {dA[[.]] - dB[[.]]})
-}
-d_inv <- function(inv_A, dA, fac_1) {
-  if (missing(fac_1)) fac_1 <- t(inv_A) %x% inv_A
-  # apply_chain(. %>% {fac_1 %*% dA[[.]]})
-  apply_chain(. %>% {eigenMapMatMult(fac_1, as.matrix(dA[[.]]))})
-}
-d_Gamma <- function(g, alpha) {
-  f <- function(t) { log(t) * dgamma(t, alpha, 1) }
-  num_1 <- integrate(f, 0, g)$value
-  num_2 <- digamma(alpha) * pgamma(g, alpha, 1)
-  - (num_1 - num_2) / dgamma(g, alpha, 1)
 }

@@ -8,7 +8,6 @@
 #' @param S_0 matrix; the scale matrix for the inverse-Wishart prior.
 #' @param init_Sigma (Optional) matrix; the starting value of the noise inverse-covariance.
 #' @param num_steps integer; number of MCMC steps.
-#' @param burn_ins integer; number of burn-ins.
 #' @return A list of two matrices. The first matrix contains the posterior samples
 #' of beta and the second matrix contains the posterior samples of Sigma. In both
 #' matrices, each row corresponding to 1 sample of the vectorised parameter.
@@ -27,8 +26,7 @@
 #'   init_Sigma = diag(dim_data)
 #' )
 #' @export
-VAR_Gibbs <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
-                      num_steps = 3e3, burn_ins = 1e3) {
+VAR_Gibbs <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3e3) {
   data0 <- train_data(data0, lag)
   Y <- data0$Y
   X <- data0$X
@@ -51,7 +49,7 @@ VAR_Gibbs <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma,
   XTY <- crossprod(X, Y)
   YTY <- crossprod(Y)
 
-  total <- num_steps + burn_ins
+  total <- num_steps
   Z <- matrix(rnorm(d * total), d, total)
   Z2 <- array(rnorm(n * n * total), dim = c(n, n, total))
   C <- matrix(0, n, total)
