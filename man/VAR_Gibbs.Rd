@@ -5,8 +5,7 @@
 \title{Model inference for Bayesian Vector-AutoRegressive (VAR) model with
 independent normal-inverse-Wishart priors.}
 \usage{
-VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
-  burn_ins = 1000)
+VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000)
 }
 \arguments{
 \item{data0}{Matrix; each row is one observation, each column is one measurement / predictor.}
@@ -24,8 +23,6 @@ VAR_Gibbs(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3000,
 \item{init_Sigma}{(Optional) matrix; the starting value of the noise inverse-covariance.}
 
 \item{num_steps}{integer; number of MCMC steps.}
-
-\item{burn_ins}{integer; number of burn-ins.}
 }
 \value{
 A list of two matrices. The first matrix contains the posterior samples
