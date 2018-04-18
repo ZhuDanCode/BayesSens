@@ -175,7 +175,7 @@ init_gauss_differential <- function(len0, l_b0) {
 tidy_gauss_differential <- function(dlist0) {
   extract_rbind <- function(attr0) {
     dlist0 %>%
-      purrr::map(~t(matrixcalc::vec(.x[[attr0]]))) %>%
+      purrr::map(~t(as.numeric(.x[[attr0]]))) %>%
       do.call(rbind, .)
   }
   list(
