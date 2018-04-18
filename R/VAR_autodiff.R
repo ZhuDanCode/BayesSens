@@ -150,7 +150,7 @@ VAR_AD <- function(data0, lag, b_0, B_0, v_0, S_0, init_Sigma, num_steps = 3e3) 
     d_L <- d_chol(L, d_inv_S, I_nn, K_nn, I_n, E_n, EIK_nn)
     d_LA <- d_product(L, d_L, A, d_A)
     d_invSigma <- d_XXT(LA, d_LA)
-    d_Sigma_on_d_invSigma <- t(Sigma) %x% Sigma
+    d_Sigma_on_d_invSigma <- - t(Sigma) %x% Sigma
 
     # Keep track
     res_beta[i, ] <- beta_g
