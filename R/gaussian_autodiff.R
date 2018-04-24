@@ -48,8 +48,8 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   kp_B_0 <- t(inv_B_0) %x% inv_B_0
   I_n <- diag(len_beta)
   I_nn <- diag(len_beta^2)
-  K_nn <- matrixcalc::commutation.matrix(len_beta)
-  elimL <- matrixcalc::elimination.matrix(len_beta)
+  K_nn <- commutation_matrix(len_beta)
+  elimL <- elimination_matrix(len_beta)
   # commD <- matrixcalc::duplication.matrix(len_beta)
   deriv_Bg <- function(sigma_g, d_sigma2) {
     d_Bg <- init_gauss_differential(len_beta^2, len_beta)
