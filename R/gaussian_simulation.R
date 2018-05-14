@@ -14,13 +14,14 @@
 gaussian_data <- function(n, p, beta, sigma, intercept = TRUE) {
   num_covariates <- ifelse(intercept, p + 1, p)
   if (missing(beta)) beta <- rnorm(num_covariates)
-  if (length(beta) != num_covariates)
+  if (missing(sigma)) sigma <- runif(1)
+  if (length(beta) != num_covariates) {
     stop(paste("The length of beta does not match the number of covariates.",
                "Did you forget to specify the intercept?\n"))
+  }
+
   X <- matrix(rnorm(n * p), nrow = n, ncol = p)
   if (intercept) X <- cbind(1, X)
-
-  if (missing(sigma)) sigma <- runif(1)
   y <- X %*% beta + rnorm(n, sd = sigma)
   list(X = X, y = y, beta = beta, sigma = sigma)
 }
