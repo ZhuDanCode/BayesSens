@@ -14,10 +14,10 @@
 #' n <- 1000
 #' p <- 5
 #' data0 <- gaussian_data(n, p, intercept = TRUE)
-#' res <- gaussian_AD(data0$X, data0$y,
-#'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
-#'   alpha_0 = 13, delta_0 = 8,
-#' )
+# res <- gaussian_AD(data0$X, data0$y,
+#   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
+#   alpha_0 = 13, delta_0 = 8,
+# )
 #' }
 #' @export
 gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
@@ -43,14 +43,14 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   # Helper variables and functions
   inv_B_0 <- solve(B_0)
   inv_B_0_times_b_0 <- inv_B_0 %*% b_0
-  XTX <- t(X) %*% X
-  XTy <- t(X) %*% y
+  XTX <- crossprod(X)
+  XTy <- crossprod(X, y)
   kp_B_0 <- t(inv_B_0) %x% inv_B_0
   I_n <- diag(len_beta)
   I_nn <- diag(len_beta^2)
-  K_nn <- commutation_matrix(len_beta)
+  K_nn <- commutation_matrix(len_beta, len_beta)
   elimL <- elimination_matrix(len_beta)
-  # commD <- matrixcalc::duplication.matrix(len_beta)
+  t_matrix <- . %>% as.matrix() %>% t()
   deriv_Bg <- function(sigma_g, d_sigma2) {
     d_Bg <- init_gauss_differential(len_beta^2, len_beta)
     inv_A <- solve(XTX / sigma_g^2 + inv_B_0)  # intermediate variable
@@ -81,8 +81,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   deriv_beta <- function(sigma_g, d_sigma2, B_g, z) {
     n <- nrow(B_g)
     L <- t(chol(B_g))
-    fac_1 <- t(elimL) %*% solve(elimL %*% (I_nn + K_nn) %*% (L %x% I_n) %*% t(elimL)) %*% elimL
-    # fac_1 <- solve((L %x% I_n) + (I_n %x% L) %*% K_nn)
+    fac_1 <- t_matrix(elimL) %*% solve(elimL %*% (I_nn + K_nn) %*% (L %x% I_n) %*% t_matrix(elimL)) %*% elimL
     z_mat <- (t(z) %x% I_n) %*% fac_1
 
     d_beta <- init_gauss_differential(len_beta, len_beta)
