@@ -32,7 +32,7 @@ gaussian_Gibbs <- function(X, y, b_0, B_0, alpha_0, delta_0,
   inv_B_0_times_b_0 <- inv_B_0 %*% b_0
   XTX <- crossprod(X)
   XTy <- crossprod(X, y)
-  beta_res <- matrix(0, c(num_steps, length(b_g)))
+  beta_res <- matrix(0, num_steps, length(b_0))
   sigma_res <- numeric(num_steps)
 
   pb <- txtProgressBar(1, num_steps, style = 3)

@@ -1,8 +1,8 @@
 apply_chain <- function(expr_fun, hyperparameter) {
   if (!is.function(expr_fun)) return(0)
-  hyperparameter %>%
-    purrr::map(expr_fun) %>%
-    purrr::set_names(hyperparameter)
+  res <- purrr::map(hyperparameter, expr_fun)
+  names(res) <- hyperparameter
+  res
 }
 
 
@@ -14,7 +14,7 @@ d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n, fac_1) {
   if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
   if (missing(E_n)) E_n <- elimination_matrix(n)
   D_n <- Matrix::t(E_n)
-  if (missing(fac_1)) fac_1 <- E_n %*% (I_nn + K_nn)
+  if (missing(fac_1)) fac_1 <- E_n + A_times_K_nq(E_n, n, n)  # E_n %*% (I_nn + K_nn)
   fac_2 <- as.matrix(
     D_n %*% solve(fac_1 %*% kronecker_sp_3_cpp(L, as.matrix(D_n))) %*% E_n)
   # apply_chain(. %>% {fac_2 %*% dA[[.]]})
@@ -24,19 +24,26 @@ d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n, fac_1) {
 
 
 d_transpose <- function(X, dX, K_nq) {
-  if (missing(K_nq)) K_nq <- commutation_matrix(nrow(X), ncol(X))
-  hyperparam <- names(dX)
-  apply_chain(. %>% {K_nq %*% dX[[.]]}, hyperparam)
+  # if (missing(K_nq)) K_nq <- commutation_matrix(nrow(X), ncol(X))
+  # hyperparam <- names(dX)
+  # apply_chain(. %>% {K_nq %*% dX[[.]]}, hyperparam)
+  apply_chain(. %>% {K_nq_times_A(dX[[.]], nrow(X), ncol(X))}, names(dX))
 }
 
 
 d_XXT <- function(X, dX, I_nn, K_nn, I_n) {
   n <- nrow(X)
   if (missing(I_n)) I_n <- Matrix::Diagonal(n)
-  if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
-  if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
+  # if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
+  # if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
   hyperparam <- names(dX)
-  f1 <- (I_nn + K_nn) %*% (X %x% I_n)
+  if (n < 50) {
+    m0 <- X %x% I_n
+    f1 <- m0 + K_nq_times_A(m0, n, n)
+    # f1 <- (I_nn + K_nn) %*% (X %x% I_n)
+  } else {
+    f1 <- C_times_A_x_I(I_nn + K_nn, X)
+  }
   apply_chain(. %>% {f1 %*% dX[[.]]}, hyperparam)
 }
 
@@ -65,13 +72,13 @@ d_kronecker <- function(A, dA, B, dB, fac_1, I_mn, I_pq, I_n, K_qm, I_p) {
   hyperparam <- switch(ind, '2' = names(dA), '3' = 0, names(dB))
   apply_chain(expr_fun, hyperparam)
   # return(apply_chain(. %>% { fac_1 %*% ((I_mn %x% as.numeric(B)) %*% dA[[.]]) }))
-  # return(apply_chain(. %>% { fac_1 %*% (kronecker_sp_2(as.numeric(B), dA[[.]])) }))
+  # return(apply_chain(. %>% { fac_1 %*% (I_x_B_times_A(as.numeric(B), dA[[.]])) }))
   # return(apply_chain(. %>% { fac_1 %*% ((as.numeric(A) %x% I_pq) %*% dB[[.]]) }))
-  # return(apply_chain(. %>% { fac_1 %*% (kronecker_sp_3(as.numeric(A), dB[[.]])) }))
+  # return(apply_chain(. %>% { fac_1 %*% (I_x_B_times_A(as.numeric(A), dB[[.]])) }))
   # apply_chain(. %>% {fac_1 %*%
   # ( (as.numeric(A) %x% I_pq) %*% dB[[.]] + (I_mn %x% as.numeric(B)) %*% dA[[.]] )})
   # apply_chain(. %>% {fac_1 %*%
-  # ( kronecker_sp_3(as.numeric(A), dB[[.]]) + kronecker_sp_2(as.numeric(B), dA[[.]]) )})
+  # ( kronecker_sp_3(as.numeric(A), dB[[.]]) + I_x_B_times_A(as.numeric(B), dA[[.]]) )})
 }
 
 
@@ -79,7 +86,12 @@ d_sum <- function(dA, dB) {
   if (is_zero(dA) && is_zero(dB)) {return(0)}
   if (is_zero(dB)) { return(dA) }
   if (is_zero(dA)) { return(dB) }
-  apply_chain(. %>% {dA[[.]] + dB[[.]]}, names(dA))
+  # apply_chain(. %>% {dA[[.]] + dB[[.]]}, names(dA))
+  print(object.size(dA))
+  for (i in names(dA)) {
+    dA[[i]] <- dA[[i]] + dB[[i]]
+  }
+  dA
 }
 
 
@@ -89,10 +101,15 @@ d_product <- function(A, dA, B, dB, I_a, I_b) {
   if (missing(I_a)) I_a <- Matrix::Diagonal(nrow(A))
   if (missing(I_b)) I_b <- Matrix::Diagonal(ncol(B))
   ind <- case(dA, dB)
+  # expr_fun <- switch(ind,
+  #    '0' = . %>% {(I_b %x% A) %*% dB[[.]] + (t(B) %x% I_a) %*% dA[[.]]},
+  #    '1' = . %>% {(I_b %x% A) %*% dB[[.]]},
+  #    '2' = . %>% {(t(B) %x% I_a) %*% dA[[.]]},
+  #    '3' = 0)
   expr_fun <- switch(ind,
-     '0' = . %>% {(I_b %x% A) %*% dB[[.]] + (t(B) %x% I_a) %*% dA[[.]]},
-     '1' = . %>% {(I_b %x% A) %*% dB[[.]]},
-     '2' = . %>% {(t(B) %x% I_a) %*% dA[[.]]},
+     '0' = . %>% {I_x_B_times_C(A, dB[[.]]) + A_x_I_times_C(t(B), dA[[.]])},
+     '1' = . %>% {I_x_B_times_C(A, dB[[.]])},
+     '2' = . %>% {A_x_I_times_C(t(B), dA[[.]])},
      '3' = 0)
   hyperparam <- switch(ind, '2' = names(dA), '3' = 0, names(dB))
   apply_chain(expr_fun, hyperparam)
@@ -161,9 +178,8 @@ is_zero <- function(x) {
   !is.list(x) && (x == 0)
 }
 
+
 case <- function(x, y) {
   # 0: list & list, 1: 0 & list, 2: list & 0, 3: 0 & 0
   as.character(ifelse(is_zero(x), 1, 0) + ifelse(is_zero(y), 2, 0))
 }
-
-

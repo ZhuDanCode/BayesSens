@@ -18,7 +18,7 @@ I_x_B_times_C <- function(B, C) {
   nc <- ncol(B)
   nr <- nrow(B)
   for (i in 1:n) {
-    Z[(1+(i-1)*nr):(i*nr), ] <- B %*% C[(1+(i-1)*nc):(i*nc), , drop = F]
+    Z[(1+(i-1)*nr):(i*nr), ] <- as.matrix(B %*% C[(1+(i-1)*nc):(i*nc), , drop = F])
   }
   Z
 }
@@ -46,8 +46,8 @@ C_times_A_x_I <- function(C, A) {
   nr <- nrow(A)
   for (i in 1:nrow(A)) {
     for (j in 1:ncol(A)) {
-      Z[, (1+(j-1)*n):(j*n) ] <- Z[, (1+(j-1)*n):(j*n)] +
-        A_times_diag_v0(C[, (1+(i-1)*n):(i*n), drop = F], rep(A[i,j], n))
+      Z[, (1+(j-1)*n):(j*n)] <- Z[, (1+(j-1)*n):(j*n)] +
+        A_times_diag_v0(as.matrix(C[, (1+(i-1)*n):(i*n), drop = F]), rep(A[i,j], n))
     }
   }
   Z
@@ -60,4 +60,17 @@ A_times_diag_v0 <- function(A, v0) {
 
 diag_v0_times_A <- function(v0, A) {
   v0 * A
+}
+
+
+A_times_K_nq <- function(A, n, q) {
+  s <- 1 + seq(0, by = q, length.out = n*q) %% (n*q - 1)
+  s[n*q] <- n * q
+  A[,s]
+}
+
+K_nq_times_A <- function(A, n, q) {
+  s <- 1 + seq(0, by = n, length.out = n*q) %% (n*q - 1)
+  s[n*q] <- n * q
+  A[s,]
 }
