@@ -16,7 +16,7 @@
 #' n <- 100
 #' p <- 10
 #' data0 <- student_t_data(n, p, intercept = TRUE)
-#' res <- student_t_Gibbs(data0$X, data0$y,
+#' res <- student_t_AD(data0$X, data0$y,
 #'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for intercept
 #'   alpha_0 = 13, delta_0 = 8, nu = 5
 #' )
@@ -64,7 +64,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   ext_d_beta <- ext_d_bg
   deriv_Bg <- function(sigma_g, d_sigma2, Lambda_g, d_Lambda) {
     d_Bg <- ext_d_Bg
-    XTLX <- left_multiply_D(t(X), Lambda_g) %*% X
+    XTLX <- A_times_diag_v0(t(X), as.numeric(Lambda_g)) %*% X
     inv_A <- solve(XTLX / sigma_g^2 + inv_B_0)  # intermediate variable
     fac_1 <- - (t(inv_A) %x% inv_A)
     fac_2 <- - matrixcalc::vec(XTLX) / sigma_g^4
@@ -83,7 +83,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   }
   deriv_bg <- function(sigma_g, d_sigma2, B_g, d_Bg, Lambda_g, d_Lambda) {
     d_bg <- ext_d_bg
-    XTLy <- left_multiply_D(t(X), Lambda_g) %*% y
+    XTLy <- A_times_diag_v0(t(X), as.numeric(Lambda_g)) %*% y
     fac_1 <- XTLy / sigma_g^2 + inv_B_0_times_b_0
     tfac_1 <- (t(fac_1) %x% diag(nrow(B_g)))
     fac_2 <- - (XTLy) / sigma_g^4
@@ -123,7 +123,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   ext_d_sigma2 <- ext_d_G <- ext_d_delta
   deriv_delta <- function(beta_g, d_beta, Lambda_g, d_Lambda) {
     d_delta <- ext_d_delta
-    fac_1 <- - 2 * left_multiply_D(t(y - X %*% beta_g), Lambda_g) %*% X
+    fac_1 <- - 2 * A_times_diag_v0(t(y - X %*% beta_g), Lambda_g) %*% X
     fac_2 <- (y - X %*% beta_g)
     fac_2 <- t(fac_2) %x% t(fac_2)
 
@@ -221,7 +221,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     d_Lambda <- deriv_Lambda(nu, g2, sigma_g, d_sigma2, beta_g, d_beta)
 
     # Update beta
-    XTL <- left_multiply_D(t(X), Lambda_g)
+    XTL <- A_times_diag_v0(t(X), as.numeric(Lambda_g))
     XTLX <- XTL %*% X
     XTLy <- XTL %*% y
     B_g <- solve(sigma_g^(-2) * XTLX + inv_B_0)
@@ -232,7 +232,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     d_beta <- deriv_beta(sigma_g, d_sigma2, Lambda_g, d_Lambda, B_g, z)
 
     # Update sigma
-    delta_g <- as.numeric(delta_0 + left_multiply_D(t(y - X %*% beta_g), Lambda_g) %*% (y - X %*% beta_g))
+    delta_g <- as.numeric(delta_0 + A_times_diag_v0(t(y - X %*% beta_g), Lambda_g) %*% (y - X %*% beta_g))
     g <- rgamma(1, alpha_1 / 2, 1)
     sigma_g <- 1 / sqrt(2 / delta_g * g)
     # Autodiff sigma

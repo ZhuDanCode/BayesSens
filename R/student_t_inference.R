@@ -10,7 +10,6 @@
 #' @param init_beta (Optional) A numeric vector; the starting value of the beta parameter.
 #' @param init_sigma (Optional) A positive number; the starting value of the sigma parameter.
 #' @param num_steps Integer; number of MCMC steps.
-#' @param burn_ins Integer; number of burn-ins.
 #' @examples
 #' \dontrun{
 #' n <- 100
@@ -23,7 +22,7 @@
 #' }
 #' @export
 student_t_Gibbs <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
-                    init_beta, init_sigma, num_steps = 1e4, burn_ins = 1e3) {
+                    init_beta, init_sigma, num_steps = 1e4) {
   if (missing(init_sigma))
     init_sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
   if (missing(init_beta))
@@ -37,8 +36,8 @@ student_t_Gibbs <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   sigma_g <- init_sigma
   inv_B_0 <- solve(B_0)
   inv_B_0_times_b_0 <- inv_B_0 %*% b_0
-  keep <- num_steps - burn_ins
-  res <- vector("list", num_steps)
+  beta_res <- matrix(0, num_steps, length(b_0))
+  sigma_res <- numeric(num_steps)
 
   pb <- txtProgressBar(1, num_steps, style = 3)
   for (i in 1:num_steps) {
@@ -47,7 +46,7 @@ student_t_Gibbs <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     Lambda <- rgamma(n, nu_1 / 2, nu_2 / 2)
 
     # Update beta
-    XTL <- left_multiply_D(t(X), Lambda)
+    XTL <- A_times_diag_v0(t(X), Lambda)
     XTLX <- XTL %*% X
     XTLy <- XTL %*% y
     B_g <- solve(sigma_g^(-2) * XTLX + inv_B_0)
@@ -55,17 +54,15 @@ student_t_Gibbs <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     beta_g <- MASS::mvrnorm(1, b_g, B_g)
 
     # Update sigma
-    delta_g <- delta_0 + left_multiply_D(t(y - X %*% beta_g), Lambda) %*% (y - X %*% beta_g)
+    delta_g <- delta_0 + A_times_diag_v0(t(y - X %*% beta_g), Lambda) %*% (y - X %*% beta_g)
     sigma_g <- 1 / sqrt(rgamma(1, alpha_1 / 2, delta_g / 2))
 
     # Keep track
-    res[[i]] <- list(beta = beta_g, sigma = sigma_g)
+    beta_res[i,] <- beta_g
+    sigma_res[i] <- sigma_g
     setTxtProgressBar(pb, i)
   }
 
   # Tidy format
-  list(
-    sigma = res %>% purrr::map_dbl(~.x$sigma) %>% tail(keep),
-    beta = res %>% purrr::map(~.x$beta) %>% tail(keep) %>% do.call(rbind, .)
-  )
+  list(sigma = sigma_res, beta = beta_res)
 }

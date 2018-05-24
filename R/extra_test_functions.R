@@ -1,5 +1,5 @@
-#' Sensitivity analysis for normal regression model with multivariate normal
-#' prior for the mean and inverse gamma for the variance.
+# Sensitivity analysis for normal regression model with multivariate normal
+# prior for the mean and inverse gamma for the variance.
 #' @param X A numeric matrix; the covariates.
 #' @param y A numeric vector; the response variable.
 #' @param b_0 A numeric vector; the mean for the multivariate normal prior.
@@ -138,3 +138,96 @@ gaussian_AD_2 <- function(X, y, b_0, B_0, alpha_0, delta_0,
     d_beta = runs_d_beta %>% tail(keep) %>% tidy_gauss_differential()
   )
 }
+
+
+# Wishart Gibbs with Wishart draws implemented via Bartlett's decomposition.
+#' @keywords internal
+wishart_test_fun <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
+                             init_gamma, init_sigma,
+                             num_steps = 1e4, burn_ins = 1e3) {
+  if (missing(init_gamma))
+    init_gamma <- g_0 + t(chol(G_0)) %*% rnorm(length(g_0)) %>% as.vector()
+  if (missing(init_sigma))
+    init_sigma <- rWishart(1, v_0, R_0)
+
+  # Initialisation
+  n <- length(y)
+  len_b0 <- length(b_0)
+  len_g0 <- length(g_0)
+  v_1 <- v_0 + n
+  gamma_g <- init_gamma
+  sigma_g <- init_sigma
+  inv_B_0 <- solve(B_0)
+  inv_B_0_times_b_0 <- inv_B_0 %*% b_0
+  inv_G_0 <- solve(G_0)
+  inv_G_0_times_g_0 <- inv_G_0 %*% g_0
+  inv_R_0 <- solve(R_0)
+
+  v <- cbind(y, s)
+  X <- cbind(Xy, Xs)
+
+  XyTXy <- crossprod(Xy)
+  XyTXs <- crossprod(Xy, Xs)
+  XsTXy <- crossprod(Xs, Xy)
+  XsTXs <- crossprod(Xs)
+  XyTy <- crossprod(Xy, y)
+  XyTs <- crossprod(Xy, s)
+  XsTy <- crossprod(Xs, y)
+  XsTs <- crossprod(Xs, s)
+  vTv <- crossprod(v, v)
+  vTX <- crossprod(v, X)
+
+  keep <- num_steps - burn_ins
+  res <- vector("list", num_steps)
+
+  #pre-simluation
+  Zy <- matrix(rnorm(len_b0 * num_steps), len_b0, num_steps)
+  Zs <- matrix(rnorm(len_g0 * num_steps), len_g0, num_steps)
+  Z2 <- array(rnorm(2 * 2 * num_steps), dim = c(2, 2, num_steps)) #2 because there are 2 equations
+  C <- matrix(0, 2, num_steps) #2 because there are 2 equations
+  for (i in 1:2) {
+    C[i,] <- rchisq(num_steps, v_1 - i + 1)
+  }
+  C <- sqrt(C)
+
+  pb <- txtProgressBar(1, num_steps, style = 3)
+  for (i in 1:num_steps) {
+    #Update beta
+    w_11_g <- sigma_g[1] - sigma_g[2] * sigma_g[3]/ sigma_g[4]
+    b_sum <- XyTy - sigma_g[2] / sigma_g[4] * (XyTs - XyTXs %*% gamma_g)
+    B_g <- solve(XyTXy / w_11_g + inv_B_0)
+    b_g <- B_g %*% (b_sum / w_11_g + inv_B_0_times_b_0)
+    chol_Bg <- t(chol(B_g))
+    beta_g <- b_g + chol_Bg %*% Zy[, i]
+
+    # Update gamma
+    w_22_g <- sigma_g[4] - sigma_g[2] * sigma_g[3] / sigma_g[1]
+    g_sum <- XsTs - sigma_g[2] / sigma_g[1] * (XsTy - XsTXy %*% beta_g)
+    G_g <- solve(XsTXs / w_22_g + inv_G_0)
+    g_g <- G_g %*% (g_sum / w_22_g + inv_G_0_times_g_0)
+    chol_Gg <- t(chol(G_g))
+    gamma_g <- g_g + chol_Gg %*% Zs[, i]
+
+    # Update sigma
+    delta <- matrix(c(beta_g, rep(0, len_b0 + len_g0), gamma_g), ncol = 2)
+    vTX_delta <- vTX %*% delta
+    X_delta <- X %*% delta
+    R_1 <- solve(R_0 + vTv - vTX_delta - t(vTX_delta) + crossprod(X_delta))
+    L <- t(chol(R_1))
+    A <- diag(C[, i]) + get_lower_tri(Z2[,,i])
+    LA <- L %*% A
+    sigma_g <- solve(LA %*% t(LA))
+
+    # Keep track
+    res[[i]] <- list(beta = beta_g, gamma = gamma_g, sigma = sigma_g)
+    setTxtProgressBar(pb, i)
+  }
+
+  # Tidy format
+  list(
+    sigma = res %>% purrr::map(~.x$sigma) %>% tail(keep) %>% lapply(as.vector) %>% do.call(rbind, .),
+    beta = res %>% purrr::map(~.x$beta) %>% tail(keep) %>% lapply(as.vector) %>% do.call(rbind, .),
+    gamma = res %>% purrr::map(~.x$gamma) %>% tail(keep) %>% lapply(as.vector) %>% do.call(rbind, .)
+  )
+}
+
