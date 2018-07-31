@@ -8,12 +8,16 @@
 #' @param delta_0 A positive number; the rate parameter of the inverse-gamma prior.
 #' @param init_sigma (Optional) A positive number; the starting value of the sigma parameter.
 #' @param num_steps Integer; number of MCMC steps.
+#' @return A list of posterior samples of the parameters; each parameter is either a
+#' a vector of length `num_steps`, or a matrix of dimension `num_steps` x d, where
+#' d is the dimension of the parameter.
 #' @examples
 #' \dontrun{
 #' n <- 100
 #' p <- 10
 #' data0 <- gaussian_data(n, p, intercept = T)
-#' res <- gaussian_Gibbs(data0$X, data0$y,
+#' res <- gaussian_Gibbs(
+#'   X = data0$X, y = data0$y,
 #'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
 #'   alpha_0 = 13, delta_0 = 8,
 #' )

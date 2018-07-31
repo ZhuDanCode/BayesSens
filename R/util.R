@@ -32,24 +32,30 @@ zeros <- function(nr = 1, nc = 1) {
 }
 
 
-# Collect objects by attributes
-collect <- function(l0) {
-  list_names <- names(l0[[1]])
-  res <- vector("list", length(list_names))
-  for (i in seq_along(list_names)) {
-    res[[i]] <- purrr::map(l0, ~.x[[list_names[i]]]) %>%
-      do.call(rbind, .)
-  }
-  purrr::set_names(res, list_names)
+# Initialise internal input for Autodiff function
+init_differential <- function(len0, vec0, names0) {
+  # initialise list of zero matrices
+  # len0 should be the dimension of the numerator
+  # vec0 should be the vector of dimensions of the denominator (parameters)
+  # names0 is the vector of names of the denominator (parameters)
+  names0 <- paste0("d_", names0)
+  vec0 %>%
+    purrr::map(~zeros(len0, .x)) %>%
+    set_names(names0)
 }
 
 
-collect_and_reshape <- function(l0) {
-  list_names <- names(l0[[1]])
-  res <- vector("list", length(list_names))
-  for (i in seq_along(list_names)) {
-    res[[i]] <- purrr::map(l0, ~as.numeric(.x[[list_names[i]]])) %>%
+# Tidy internal output for Autodiff function
+# input: dlist0 contains N lists of matrices named by vec0.
+# output: a named list of (N-row) matrices.
+tidy_list <- function(dlist0) {
+  extract_rbind <- function(attr0) {
+    dlist0 %>%
+      purrr::map(~t(as.numeric(.x[[attr0]]))) %>%
       do.call(rbind, .)
   }
-  purrr::set_names(res, list_names)
+  vec0 <- names(dlist0[[1]])
+  vec0 %>%
+    purrr::map(extract_rbind) %>%
+    purrr::set_names(vec0)
 }

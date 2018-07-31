@@ -1,4 +1,5 @@
-# This function is needed to align with the implementation in the Autodiff function.
+# This function aligns with the implementation in the Autodiff function, and it is needed
+# for checking against the numerical differentiation.
 test_fun <- function(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps) {
   if (missing(init_sigma))
     init_sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
@@ -39,115 +40,117 @@ test_fun <- function(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps) {
 }
 
 testthat::test_that("Testing gaussian autodiff", {
-  skip_on_cran()
-  set.seed(123);
+  # testthat::skip_on_cran()
+  #======================= Setup and Initialisation  ==============================
+  library(BayesSense)
+  # Setup data
+  set.seed(123)
   n <- 1000
   p <- 5
   data0 <- gaussian_data(n, p, intercept = FALSE)
 
-  set.seed(123);
+  # Initialise Base Case and Autodiff Case
+  set.seed(123)
   b_0 <- rnorm(p)
   B_0 <- pdmatrix(p)$Sigma
   h <- 0.00001
-
-  res <- gaussian_AD(
-    data0$X, data0$y, b_0 = b_0, B_0 = B_0,
-    alpha_0 = 3, delta_0 = 5, num_steps = 200, burn_ins = 0
+  default_parameters <- list(
+    X = data0$X, y = data0$y,
+    b_0 = b_0, B_0 = B_0, alpha_0 = 3, delta_0 = 5,
+    num_steps = 2000
   )
+  set.seed(123)
+  base_case <- do.call(test_fun, default_parameters)
+  set.seed(123)
+  res <- do.call(gaussian_AD, default_parameters)
+
+  # Helper functions
+  # This function computes the sensitivity of the posterior mean
+  # x , y are matrices with 'num_steps' rows and 'dim(parameters)' cols.
+  numdiff <- function(x, y) {
+    if (is.matrix(x) && is.matrix(y)) {
+      return((colMeans_tail(x) - colMeans_tail(y)) / h)
+    }
+    (mean_tail(x) - mean_tail(y)) / h
+  }
 
   #================== Check sensitivity of beta and sigma wrt b0 ======================
   for (i in 1:p) {
-    new_b_0 <- b_0
-    new_b_0[i] <- new_b_0[i] + h
+    new_parameters <- default_parameters
+    new_parameters$b_0[i] <- new_parameters$b_0[i] + h
 
-    set.seed(123);
-    a <- test_fun(
-      data0$X, data0$y, b_0 = b_0, B_0 = B_0,
-      alpha_0 = 3, delta_0 = 5, num_steps = 2000
-    )
+    set.seed(123)
+    new_case <- do.call(test_fun, new_parameters)
+    v1 <- numdiff(new_case$beta, base_case$beta)
+    s1 <- numdiff(new_case$sigma^2, base_case$sigma^2)
 
-    set.seed(123);
-    b <- test_fun(
-      data0$X, data0$y, b_0 = new_b_0, B_0 = B_0,
-      alpha_0 = 3, delta_0 = 5, num_steps = 2000
-    )
-
-    v1 <- (colMeans(b$beta) - colMeans(a$beta)) / h
-    v2 <- matrix(colMeans(res$d_beta$d_b0), p, p)[,i]
+    # Compare with autodiff
+    v2 <- matrix(colMeans_tail(res$d_beta$d_b0), p, p)[,i]
     testthat::expect_lt(sum(abs(v1 - v2)), 1e-5)
-
-    s1 <- (mean(b$sigma^2) - mean(a$sigma^2)) / h
-    s2 <- colMeans(res$d_sigma2$d_b0)[i]
+    s2 <- colMeans_tail(res$d_sigma2$d_b0)[i]
     testthat::expect_lt(sum(abs(s1 - s2)), 1e-5)
+    print(rbind(numdiff = v1, autodiff = v2))
+    print(rbind(numdiff = s1, autodiff = s2))
   }
 
   #================== Check sensitivity of beta and sigma wrt B_0 =====================
   for (j in 1:p) {
     for (i in 1:p) {
-      new_B_0 <- B_0
-      new_B_0[i, j] <- new_B_0[i, j] + h
+      new_parameters <- default_parameters
+      new_parameters$B_0[i, j] <- new_parameters$B_0[i, j] + h
 
-      set.seed(123);
-      a <- test_fun(
-        data0$X, data0$y, b_0 = b_0, B_0 = B_0,
-        alpha_0 = 3, delta_0 = 5, num_steps = 2000
-      )
+      set.seed(123)
+      new_case <- do.call(test_fun, new_parameters)
+      v1 <- numdiff(new_case$beta, base_case$beta)
+      s1 <- numdiff(new_case$sigma^2, base_case$sigma^2)
 
-      set.seed(123);
-      b <- test_fun(
-        data0$X, data0$y, b_0 = b_0, B_0 = new_B_0,
-        alpha_0 = 3, delta_0 = 5, num_steps = 2000
-      )
-
-      v1 <- (colMeans(b$beta) - colMeans(a$beta)) / h
-      v2 <- matrix(colMeans(res$d_beta$d_B0), p, p^2)[, i + (j-1) * p]
+      # Compare with autodiff
+      v2 <- matrix(colMeans_tail(res$d_beta$d_B0), p, p^2)[, i + (j-1) * p]
       testthat::expect_lt(sum(abs(v1 - v2)), 1e-5)
-
-      s1 <- (mean(b$sigma^2) - mean(a$sigma^2)) / h
-      s2 <- colMeans(res$d_sigma2$d_B0)[i + (j-1) * p]
+      s2 <- colMeans_tail(res$d_sigma2$d_B0)[i + (j-1) * p]
       testthat::expect_lt(sum(abs(s1 - s2)), 1e-5)
+      print(rbind(numdiff = v1, autodiff = v2))
+      print(rbind(numdiff = s1, autodiff = s2))
     }
   }
 
   #================== Check sensitivity of beta and sigma wrt alpha_0 =================
-  set.seed(123);
-  a <- test_fun(
-    data0$X, data0$y, b_0 = b_0, B_0 = B_0,
-    alpha_0 = 3, delta_0 = 5, num_steps = 5000
-  )
+  default_parameters$num_steps <- 5000
+  new_parameters <- default_parameters
+  new_parameters$alpha_0 <- new_parameters$alpha_0 + h
 
-  set.seed(123);
-  b <- test_fun(
-    data0$X, data0$y, b_0 = b_0, B_0 = B_0,
-    alpha_0 = 3 + h, delta_0 = 5, num_steps = 5000
-  )
+  set.seed(123)
+  base_case <- do.call(test_fun, default_parameters)
+  set.seed(123)
+  new_case <- do.call(test_fun, new_parameters)
+  v1 <- numdiff(new_case$beta, base_case$beta)
+  s1 <- numdiff(new_case$sigma^2, base_case$sigma^2)
 
-  v1 <- (colMeans(tail(b$beta, 4e3)) - colMeans(tail(a$beta, 4e3))) / h
-  v2 <- colMeans(res$d_beta$d_alpha0)
+  # Compare with autodiff
+  v2 <- colMeans_tail(res$d_beta$d_alpha0)
   testthat::expect_lt(sum(abs(v1 - v2)), 1e-5)
-
-  s1 <- (mean(b$sigma^2) - mean(a$sigma^2)) / h
-  s2 <- colMeans(res$d_sigma2$d_alpha0)
+  s2 <- colMeans_tail(res$d_sigma2$d_alpha0)
   testthat::expect_lt(sum(abs(s1 - s2)), 1e-5)
+  print(rbind(numdiff = v1, autodiff = v2))
+  print(rbind(numdiff = s1, autodiff = s2))
 
   #================== Check sensitivity of beta and sigma wrt delta_0 =================
-  set.seed(123);
-  a <- test_fun(
-    data0$X, data0$y, b_0 = b_0, B_0 = B_0,
-    alpha_0 = 3, delta_0 = 5, num_steps = 5000
-  )
+  default_parameters$num_steps <- 5000
+  new_parameters <- default_parameters
+  new_parameters$delta_0 <- new_parameters$delta_0 + h
 
-  set.seed(123);
-  b <- test_fun(
-    data0$X, data0$y, b_0 = b_0, B_0 = new_B_0,
-    alpha_0 = 3, delta_0 = 5 + h, num_steps = 5000
-  )
+  set.seed(123)
+  base_case <- do.call(test_fun, default_parameters)
+  set.seed(123)
+  new_case <- do.call(test_fun, new_parameters)
+  v1 <- numdiff(new_case$beta, base_case$beta)
+  s1 <- numdiff(new_case$sigma^2, base_case$sigma^2)
 
-  v1 <- (colMeans(tail(b$beta, 4e3)) - colMeans(tail(a$beta, 4e3))) / h
-  v2 <- colMeans(res$d_beta$d_delta0)
+  # Compare with autodiff
+  v2 <- colMeans_tail(res$d_beta$d_delta0)
   testthat::expect_lt(sum(abs(v1 - v2)), 1e-5)
-
-  s1 <- (mean(b$sigma^2) - mean(a$sigma^2)) / h
-  s2 <- colMeans(res$d_sigma2$d_delta0)
+  s2 <- colMeans_tail(res$d_sigma2$d_delta0)
   testthat::expect_lt(sum(abs(s1 - s2)), 1e-5)
+  print(rbind(numdiff = v1, autodiff = v2))
+  print(rbind(numdiff = s1, autodiff = s2))
 })

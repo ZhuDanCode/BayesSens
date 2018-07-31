@@ -1,7 +1,7 @@
 ---
-title: "Introduction to [add package name]"
+title: "BayesSense: Gaussian distribution with independent Normal-Inverse Gamma priors"
 author: "[add author name]"
-date: "`r Sys.Date()`"
+date: "Last updated on: `r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Vignette Title}
@@ -16,8 +16,19 @@ knitr::opts_chunk$set(
 )
 ```
 
-#### Data simulation 
-We load the package and simulate some data from the gaussian model with the function `gaussian_data(n, p)`, where `n` is the number of datapoints, and `p` is the number of measurements per datapoint. There are two optional arguments `beta` and `sigma`. 
+In this vignette, we conduct Bayesian sensitivity analysis of the Gaussian distribution with independent Normal-Inverse Gamma priors.
+
+
+## Content {#content}
+
+1. [Data simulation](#data_sim)
+2. [Model specification](#model_spec)
+3. [MCMC Inference](#mcmc_infer)
+4. [MCMC Sensitivity Analysis](#mcmc_sense)
+
+
+## 1. Data simulation {#data_sim}
+To begin with, we load the package and simulate some data from the gaussian model with the function `gaussian_data(n, p)`, where `n` is the number of datapoints, and `p` is the number of measurements per datapoint. There are two optional arguments `beta` and `sigma`, corresponding to the regression coefficients and variance in a classical linear regression model.
 
 ```{r}
 library(BayesSense)
@@ -25,29 +36,56 @@ n <- 100
 p <- 3
 data0 <- gaussian_data(n, p, intercept = T)
 str(data0)
+
+# Alternatively, you can supply your own coefficients
+beta0 <- c(-0.1, 0.1, -0.1, 0.1)
+sigma0 <- 2
+data0 <- gaussian_data(n, p, beta = beta0, sigma = sigma0, intercept = T)
+str(data0)
 ```
 
 
-#### The model
-Observed data $y = (y_1, ..., y_n)'$ with distribution
-$$y \sim N_n(X\beta, \sigma^2 I_n)$$
+## 2. Model specification {#model_spec}
+
+Denote the response variable by $y$ ($n$ vector), the predictor variable by $X$ ($n \times p$ matrix), the *Gaussian model with independent Normal-Inverse Gamma priors* are given as follows:
+$$y \sim N\left(X\beta, \sigma^2 I_p\right)$$
 
 with prior distributions
-$$\beta \sim N_K(\beta_0, B_0) \quad \text{and}\quad \sigma^2 \sim IG(\alpha_0 /2, \delta_0 / 2)$$
+$$\beta \sim N_p\left(\beta_0, B_0\right) \quad \text{and}\quad \sigma^2 \sim IG\left(\dfrac{\alpha_0} 2, \dfrac{\delta_0} 2 \right)$$
 
 
-#### Inference with MCMC
-We fit the model using MCMC using the function `gaussian_Gibbs`. We need to provide `b_0, B_0, alpha_0` and `delta_0`. For convenience, here we simply initialise them randomly.
-```{r}
-res <- gaussian_Gibbs(data0$X, data0$y,
-  b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma, # add one for intercept
-  alpha_0 = 13, delta_0 = 8,
+## 3. MCMC inference {#mcmc_infer}
+We fit the model using MCMC with the function `gaussian_Gibbs`. We need to provide `b_0, B_0, alpha_0` and `delta_0`. 
+
+```{r, results='hide'}
+res <- gaussian_Gibbs(
+  X = data0$X, y = data0$y,
+  b_0 = numeric(p+1), B_0 = diag(p+1), # add one for intercept
+  alpha_0 = 13, delta_0 = 8
 )
 ```
 
+The result contains the posterior samples of the parameters. 
+```{r}
+str(res)
+# Note that the number of MCMC iterations is set to be 10000 by default, so we have 10000 posterior samples for each parameter. 
+```
 
-Finally, we can plot out the posterior distribution of each parameter.
+We can inspect the posterior distribution of the parameters individually with `hist`, or with `plot_posterior`
+
 ```{r, fig.width=7, fig.height=6}
 plot_posterior(res)
+```
+
+
+## 4. MCMC Sensitivity Analysis {#mcmc_sense}
+We conduct the sensitivity analysis using the `gaussian_AD` function; this function has exactly the same interface as `gaussian_Gibbs`.
+
+```{r, results='hide'}
+res <- gaussian_Gibbs(
+  X = data0$X, y = data0$y,
+  b_0 = numeric(p+1), B_0 = diag(p+1), # add one for intercept
+  alpha_0 = 13, delta_0 = 8
+)
 ```
 

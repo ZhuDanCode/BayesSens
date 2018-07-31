@@ -5,8 +5,7 @@
 \title{Sensitivity analysis for normal regression model with multivariate normal
 prior for the mean and inverse gamma for the variance.}
 \usage{
-gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps = 10000,
-  burn_ins = 1000)
+gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps = 1000)
 }
 \arguments{
 \item{X}{A numeric matrix; the covariates.}
@@ -24,8 +23,6 @@ gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps = 10000,
 \item{init_sigma}{(Optional) A numeric matrix}
 
 \item{num_steps}{Integer; number of MCMC steps.}
-
-\item{burn_ins}{Integer; number of burn-ins.}
 }
 \description{
 Sensitivity analysis for normal regression model with multivariate normal
@@ -36,8 +33,9 @@ prior for the mean and inverse gamma for the variance.
 n <- 1000
 p <- 5
 data0 <- gaussian_data(n, p, intercept = TRUE)
-res <- gaussian_AD(data0$X, data0$y,
-  b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
+res <- gaussian_AD(
+  X = data0$X, y = data0$y,
+  b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for the intercept
   alpha_0 = 13, delta_0 = 8,
 )
 }

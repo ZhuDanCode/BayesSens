@@ -8,34 +8,38 @@
 #' @param delta_0 A positive number; the rate parameter of the inverse-gamma prior.
 #' @param init_sigma (Optional) A numeric matrix
 #' @param num_steps Integer; number of MCMC steps.
-#' @param burn_ins Integer; number of burn-ins.
 #' @examples
 #' \dontrun{
 #' n <- 1000
 #' p <- 5
 #' data0 <- gaussian_data(n, p, intercept = TRUE)
-#' res <- gaussian_AD(data0$X, data0$y,
-#'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
+#' res <- gaussian_AD(
+#'   X = data0$X, y = data0$y,
+#'   b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for the intercept
 #'   alpha_0 = 13, delta_0 = 8,
 #' )
 #' }
 #' @export
 gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
-                        init_sigma, num_steps = 1e4, burn_ins = 1e3) {
+                        init_sigma, num_steps = 1e3) {
   if (missing(init_sigma))
     init_sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
 
   # Initialisation
+  init_gauss_differential <- purrr::partial(
+    init_differential,
+    vec0 = purrr::map_dbl(list(b_0, B_0, alpha_0, delta_0, init_sigma), length),
+    names0 = c("b0", "B0", "alpha0", "delta0", "sigma2_0")
+  )
   n <- length(y)
   alpha_1 <- alpha_0 + n
   sigma_g <- init_sigma
   # Autodiff variables
   len_beta <- length(b_0)
-  d_beta <- init_gauss_differential(len_beta, len_beta)
-  d_sigma2 <- init_gauss_differential(1, len_beta)
+  d_beta <- init_gauss_differential(length(b_0))
+  d_sigma2 <- init_gauss_differential(length(sigma_g))
   d_sigma2$d_sigma2_0 <- matrix(1)
   # Variables to keep track
-  keep <- num_steps - burn_ins
   runs_param <- vector("list", num_steps)
   runs_d_beta <- vector("list", num_steps)
   runs_d_sigma2 <- vector("list", num_steps)
@@ -51,8 +55,9 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   K_nn <- commutation_matrix(len_beta, len_beta)
   elimL <- elimination_matrix(len_beta)
   t_matrix <- . %>% as.matrix() %>% t()
+
   deriv_Bg <- function(sigma_g, d_sigma2) {
-    d_Bg <- init_gauss_differential(len_beta^2, len_beta)
+    d_Bg <- init_gauss_differential(length(B_0))
     inv_A <- solve(XTX / sigma_g^2 + inv_B_0)  # intermediate variable
     fac_1 <- - (t(inv_A) %x% inv_A)
     fac_2 <- - matrixcalc::vec(XTX) / sigma_g^4
@@ -66,7 +71,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     d_Bg
   }
   deriv_bg <- function(sigma_g, d_sigma2, B_g, d_Bg) {
-    d_bg <- init_gauss_differential(len_beta, len_beta)
+    d_bg <- init_gauss_differential(length(b_0))
     fac_1 <- XTy / sigma_g^2 + inv_B_0_times_b_0
     tfac_1 <- (t(fac_1) %x% diag(nrow(B_g)))
     fac_2 <- - (XTy) / sigma_g^4
@@ -84,7 +89,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     fac_1 <- t_matrix(elimL) %*% solve(elimL %*% (I_nn + K_nn) %*% (L %x% I_n) %*% t_matrix(elimL)) %*% elimL
     z_mat <- (t(z) %x% I_n) %*% fac_1
 
-    d_beta <- init_gauss_differential(len_beta, len_beta)
+    d_beta <- init_gauss_differential(length(b_0))
     d_Bg <- deriv_Bg(sigma_g, d_sigma2)
     d_bg <- deriv_bg(sigma_g, d_sigma2, B_g, d_Bg)
 
@@ -96,7 +101,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     d_beta
   }
   deriv_delta <- function(beta_g, d_beta) {
-    d_delta <- init_gauss_differential(1, len_beta)
+    d_delta <- init_gauss_differential(length(delta_0))
     fac_1 <- - 2 * t(y - X %*% beta_g) %*% X
     d_delta$d_b0 <- fac_1 %*% d_beta$d_b0
     d_delta$d_B0 <- fac_1 %*% d_beta$d_B0
@@ -106,7 +111,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     d_delta
   }
   deriv_G <- function(G, alpha) {
-    d_G <- init_gauss_differential(1, len_beta)
+    d_G <- init_gauss_differential(1)
     f <- function(t) { log(t) * dgamma(t, alpha, 1) }
     num_1 <- integrate(f, 0, G)$value
     num_2 <- digamma(alpha) * pgamma(G, alpha, 1)
@@ -116,7 +121,7 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   deriv_sigma2 <- function(beta_g, delta_g, G, alpha_1, d_beta) {
     d_delta <- deriv_delta(beta_g, d_beta)
     d_G <- deriv_G(G, 0.5 * alpha_1)
-    d_sigma2 <- init_gauss_differential(1, len_beta)
+    d_sigma2 <- init_gauss_differential(length(sigma_g))
     d_sigma2$d_b0 <- d_delta$d_b0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_b0
     d_sigma2$d_B0 <- d_delta$d_B0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_B0
     d_sigma2$d_alpha0 <- d_delta$d_alpha0 / (2 * G) - delta_g / (2 * G^2) * d_G$d_alpha0
@@ -151,37 +156,11 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   }
 
   # Tidy format
-  list(
-    sigma = runs_param %>% purrr::map_dbl(~.x$sigma) %>% tail(keep),
-    beta = runs_param %>% purrr::map(~t(.x$beta)) %>% tail(keep) %>% do.call(rbind, .),
-    d_sigma2 = runs_d_sigma2 %>% tail(keep) %>% tidy_gauss_differential(),
-    d_beta = runs_d_beta %>% tail(keep) %>% tidy_gauss_differential()
-  )
-}
-
-
-init_gauss_differential <- function(len0, l_b0) {
-  list(
-    d_b0 = zeros(len0, l_b0),
-    d_B0 = zeros(len0, l_b0^2),
-    d_alpha0 = zeros(len0, 1),
-    d_delta0 = zeros(len0, 1),
-    d_sigma2_0 = zeros(len0, 1)
-  )
-}
-
-
-tidy_gauss_differential <- function(dlist0) {
-  extract_rbind <- function(attr0) {
-    dlist0 %>%
-      purrr::map(~t(as.numeric(.x[[attr0]]))) %>%
-      do.call(rbind, .)
-  }
-  list(
-    d_b0 = extract_rbind("d_b0"),
-    d_B0 = extract_rbind("d_B0"),
-    d_alpha0 = extract_rbind("d_alpha0"),
-    d_delta0 = extract_rbind("d_delta0"),
-    d_sigma2_0 = extract_rbind("d_sigma2_0")
+  append(
+    tidy_list(runs_param),
+    list(
+      d_sigma2 = tidy_list(runs_d_sigma2),
+      d_beta = tidy_list(runs_d_beta)
+    )
   )
 }

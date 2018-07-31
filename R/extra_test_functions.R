@@ -1,27 +1,8 @@
 # Sensitivity analysis for normal regression model with multivariate normal
 # prior for the mean and inverse gamma for the variance.
-#' @param X A numeric matrix; the covariates.
-#' @param y A numeric vector; the response variable.
-#' @param b_0 A numeric vector; the mean for the multivariate normal prior.
-#' @param B_0 A numeric matrix; the covariance for the multivariate normal prior.
-#' @param alpha_0 A positive number; the shape parameter of the inverse-gamma prior.
-#' @param delta_0 A positive number; the rate parameter of the inverse-gamma prior.
-#' @param init_sigma (Optional) A numeric matrix
-#' @param num_steps Integer; number of MCMC steps.
-#' @param burn_ins Integer; number of burn-ins.
-#' @examples
-#' \dontrun{
-#' n <- 1000
-#' p <- 5
-#' data0 <- gaussian_data(n, p, intercept = TRUE)
-#' res <- gaussian_AD_2(data0$X, data0$y,
-#'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
-#'   alpha_0 = 13, delta_0 = 8,
-#' )
-#' }
 #' @keywords internal
 gaussian_AD_2 <- function(X, y, b_0, B_0, alpha_0, delta_0,
-                        init_sigma, num_steps = 1e4, burn_ins = 1e3) {
+                        init_sigma, num_steps = 1e3) {
   if (missing(init_sigma))
     init_sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
 
@@ -30,7 +11,6 @@ gaussian_AD_2 <- function(X, y, b_0, B_0, alpha_0, delta_0,
   len_beta <- length(b_0)
   alpha_1 <- alpha_0 + n
   sigma_g <- init_sigma
-  keep <- num_steps - burn_ins
   runs_param <- vector("list", num_steps)
 
   # Autodiff helper variables and functions
@@ -131,11 +111,12 @@ gaussian_AD_2 <- function(X, y, b_0, B_0, alpha_0, delta_0,
   }
 
   # Tidy format
-  list(
-    sigma = runs_param %>% purrr::map_dbl(~.x$sigma) %>% tail(keep),
-    beta = runs_param %>% purrr::map(~t(.x$beta)) %>% tail(keep) %>% do.call(rbind, .),
-    d_sigma2 = runs_d_sigma2 %>% tail(keep) %>% tidy_gauss_differential(),
-    d_beta = runs_d_beta %>% tail(keep) %>% tidy_gauss_differential()
+  append(
+    tidy_list(runs_param),
+    list(
+      d_sigma2 = tidy_list(runs_d_sigma2),
+      d_beta = tidy_list(runs_d_beta)
+    )
   )
 }
 
@@ -143,8 +124,7 @@ gaussian_AD_2 <- function(X, y, b_0, B_0, alpha_0, delta_0,
 # Wishart Gibbs with Wishart draws implemented via Bartlett's decomposition.
 #' @keywords internal
 wishart_test_fun <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
-                             init_gamma, init_sigma,
-                             num_steps = 1e4, burn_ins = 1e3) {
+                             init_gamma, init_sigma, num_steps = 1e3) {
   if (missing(init_gamma))
     init_gamma <- g_0 + t(chol(G_0)) %*% rnorm(length(g_0)) %>% as.vector()
   if (missing(init_sigma))
@@ -177,7 +157,6 @@ wishart_test_fun <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
   vTv <- crossprod(v, v)
   vTX <- crossprod(v, X)
 
-  keep <- num_steps - burn_ins
   res <- vector("list", num_steps)
 
   #pre-simluation
@@ -225,9 +204,18 @@ wishart_test_fun <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
 
   # Tidy format
   list(
-    sigma = res %>% purrr::map(~.x$sigma) %>% tail(keep) %>% lapply(as.vector) %>% do.call(rbind, .),
-    beta = res %>% purrr::map(~.x$beta) %>% tail(keep) %>% lapply(as.vector) %>% do.call(rbind, .),
-    gamma = res %>% purrr::map(~.x$gamma) %>% tail(keep) %>% lapply(as.vector) %>% do.call(rbind, .)
+    sigma = res %>% purrr::map(~.x$sigma) %>% lapply(as.vector) %>% do.call(rbind, .),
+    beta = res %>% purrr::map(~.x$beta) %>% lapply(as.vector) %>% do.call(rbind, .),
+    gamma = res %>% purrr::map(~.x$gamma) %>% lapply(as.vector) %>% do.call(rbind, .)
   )
 }
 
+
+# Helper functions for testing
+colMeans_tail <- function(X, p = 0.9) {
+  colMeans(tail(X, max(round(nrow(X) * p), 1)))
+}
+
+mean_tail <- function(v0, p = 0.9) {
+  mean(tail(v0, max(round(length(v0) * p), 1)))
+}
