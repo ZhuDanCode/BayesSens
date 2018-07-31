@@ -1,3 +1,6 @@
+context("Check Auto-differentiation results are consistent with Numerical differentiation")
+library(BayesSense)
+
 # This function aligns with the implementation in the Autodiff function, and it is needed
 # for checking against the numerical differentiation.
 test_fun <- function(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps) {

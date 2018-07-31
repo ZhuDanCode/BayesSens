@@ -1,4 +1,6 @@
-# Cross-checking the gaussian autodiff using a different implementation
+context("Cross-checking the gaussian autodiff using a different implementation")
+library(BayesSense)
+
 testthat::test_that("Test gaussian autodiff", {
   set.seed(123)
   n <- 1000
