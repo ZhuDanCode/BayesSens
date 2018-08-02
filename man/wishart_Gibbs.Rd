@@ -6,7 +6,7 @@
 priors for the means and inverse gamma for the variances.}
 \usage{
 wishart_Gibbs(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0, init_gamma,
-  init_sigma, num_steps = 10000, burn_ins = 1000)
+  init_sigma, num_steps = 10000)
 }
 \arguments{
 \item{Xy}{A numeric matrix; the first set of covariates.}

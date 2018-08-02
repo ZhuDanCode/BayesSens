@@ -6,7 +6,7 @@
 prior for the mean and inverse gamma for the variance.}
 \usage{
 student_t_AD(X, y, b_0, B_0, alpha_0, delta_0, nu, init_beta, init_sigma,
-  num_steps = 10000, burn_ins = 1000)
+  num_steps = 10000)
 }
 \arguments{
 \item{X}{A numeric matrix; the covariates.}
@@ -37,11 +37,11 @@ prior for the mean and inverse gamma for the variance.
 }
 \examples{
 \dontrun{
-n <- 100
-p <- 10
+n <- 50
+p <- 3
 data0 <- student_t_data(n, p, intercept = TRUE)
 res <- student_t_AD(data0$X, data0$y,
-  b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for intercept
+  b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for intercept
   alpha_0 = 13, delta_0 = 8, nu = 5
 )
 }

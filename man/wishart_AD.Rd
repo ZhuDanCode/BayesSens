@@ -6,7 +6,7 @@
 prior for the means and inverse gamma for the variance.}
 \usage{
 wishart_AD(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0, init_gamma, init_sigma,
-  num_steps = 10000, burn_ins = 1000)
+  num_steps = 10000)
 }
 \arguments{
 \item{Xy}{A numeric matrix; the first set of covariates.}
@@ -54,6 +54,6 @@ res <- wishart_AD(Xy = data0$Xy, y = data0$y,
                      Xs = data0$Xs, s = data0$s,
                      g_0 = rep(0, k + 1), G_0 = diag(k + 1),
                      v_0 = 5, R_0 = diag(2),
-                     num_steps = 1e3, burn_ins = 0)
+                     num_steps = 1e3)
 }
 }
