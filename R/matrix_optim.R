@@ -62,7 +62,6 @@ diag_v0_times_A <- function(v0, A) {
   v0 * A
 }
 
-
 A_times_K_nq <- function(A, n, q) {
   s <- 1 + seq(0, by = q, length.out = n*q) %% (n*q - 1)
   s[n*q] <- n * q
