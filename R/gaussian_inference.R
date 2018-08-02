@@ -19,7 +19,7 @@
 #' res <- gaussian_Gibbs(
 #'   X = data0$X, y = data0$y,
 #'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
-#'   alpha_0 = 13, delta_0 = 8,
+#'   alpha_0 = 13, delta_0 = 8
 #' )
 #' }
 #' @export
