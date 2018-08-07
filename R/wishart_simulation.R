@@ -8,17 +8,19 @@
 #' @param gamma (optional) numeric vector; the second set of regression coefficients.
 #' It shoud be of length (k+2) if 'intercept_2 = T'. The intercept should be
 #' the first element. The endogeneity factor should be the second element.
-#' @param sigma (optional) 2x2 numeric matrix; the covariance matrix of the distribution.
+#' @param Sigma (optional) 2x2 numeric matrix; the covariance matrix of the distribution.
 #' @param intercept_1 TRUE or FALSE; whether to include an intercept / bias term.
 #' @param intercept_2 TRUE or FALSE; whether to include an intercept / bias term.
-#' @return A list of the data X, y, and the parameters beta, df.
+#' @return A list of the data X, y, Xs, s and the parameters beta, gamma and sigma.
 #' @examples
 #' data0 <- wishart_data(n = 100, p = 10, k = 3)
 #' data1 <- wishart_data(n = 100, p = 2, k = 3,
 #'   beta = c(0.2, -0.3, 0.4), gamma = c(0.2, 0.6, -0.2),
-#'   sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2), intercept_1 = FALSE, intercept_2 = FALSE)
+#'   Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
+#'   intercept_1 = FALSE, intercept_2 = FALSE
+#' )
 #' @export
-wishart_data <- function(n, p, k, beta, gamma, sigma,
+wishart_data <- function(n, p, k, beta, gamma, Sigma,
                          intercept_1 = TRUE, intercept_2 = TRUE) {
 
   num_covariates_1 <- ifelse(intercept_1, p + 2, p + 1)
@@ -31,9 +33,9 @@ wishart_data <- function(n, p, k, beta, gamma, sigma,
   if (length(gamma) != num_covariates_2)
     stop(paste("The length of gamma does not match the number of covariates.",
                "Did you forget to specify the intercept?\n"))
-  if (missing(sigma)) sigma <- pdmatrix(2)$Sigma
+  if (missing(Sigma)) Sigma <- pdmatrix(2)$Sigma
 
-  err <- t(chol(sigma)) %*% matrix(rnorm(2 * n), 2, n) %>% t()
+  err <- t(chol(Sigma)) %*% matrix(rnorm(2 * n), 2, n) %>% t()
 
   Xs <- matrix(rnorm(n * k), nrow = n, ncol = k)
   if (intercept_2) Xs <- cbind(1, Xs)
@@ -47,5 +49,5 @@ wishart_data <- function(n, p, k, beta, gamma, sigma,
   }
   y <- Xy %*% beta + err[, 1]
 
-  list(Xy = Xy, y = y, beta = beta, Xs = Xs, s = s, gamma = gamma, sigma = sigma)
+  list(Xy = Xy, y = y, beta = beta, Xs = Xs, s = s, gamma = gamma, Sigma = Sigma)
 }
