@@ -19,14 +19,11 @@ d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n, fac_1) {
     D_n %*% solve(fac_1 %*% kronecker_sp_3_cpp(L, as.matrix(D_n))) %*% E_n)
   # apply_chain(. %>% {fac_2 %*% dA[[.]]})
   hyperparam <- names(dA)
-  apply_chain(. %>% {eigenMapMatMult(fac_2, dA[[.]])}, hyperparam)
+  apply_chain(. %>% {eigenMapMatMult(fac_2, as.matrix(dA[[.]]))}, hyperparam)
 }
 
 
 d_transpose <- function(X, dX, K_nq) {
-  # if (missing(K_nq)) K_nq <- commutation_matrix(nrow(X), ncol(X))
-  # hyperparam <- names(dX)
-  # apply_chain(. %>% {K_nq %*% dX[[.]]}, hyperparam)
   apply_chain(. %>% {K_nq_times_A(dX[[.]], nrow(X), ncol(X))}, names(dX))
 }
 
@@ -86,12 +83,7 @@ d_sum <- function(dA, dB) {
   if (is_zero(dA) && is_zero(dB)) {return(0)}
   if (is_zero(dB)) { return(dA) }
   if (is_zero(dA)) { return(dB) }
-  # apply_chain(. %>% {dA[[.]] + dB[[.]]}, names(dA))
-  print(object.size(dA))
-  for (i in names(dA)) {
-    dA[[i]] <- dA[[i]] + dB[[i]]
-  }
-  dA
+  apply_chain(. %>% {dA[[.]] + dB[[.]]}, names(dA))
 }
 
 
@@ -171,6 +163,13 @@ d_constant_multiply_constant <- function(a, da, b, db) {
     '3' = 0)
   hyperparam <- switch(ind, '2' = names(da), '3' = 0, names(db))
   apply_chain(expr_fun, hyperparam)
+}
+
+
+d_constant_divide_constant <- function(a, da, b, db) {
+  d_constant_multiply_constant(
+    a, da, 1 / b, d_constant_inv(1 / b, db)
+  )
 }
 
 
