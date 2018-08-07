@@ -16,7 +16,7 @@
 #' res <- gaussian_AD(
 #'   X = data0$X, y = data0$y,
 #'   b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for the intercept
-#'   alpha_0 = 13, delta_0 = 8,
+#'   alpha_0 = 13, delta_0 = 8
 #' )
 #' }
 #' @export

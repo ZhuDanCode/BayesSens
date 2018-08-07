@@ -16,7 +16,7 @@
 #' p <- 3
 #' data0 <- student_t_data(n, p, intercept = TRUE)
 #' res <- student_t_AD(data0$X, data0$y,
-#'   b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for intercept
+#'   b_0 = numeric(p+1), B_0 = diag(p+1),  # add one for intercept
 #'   alpha_0 = 13, delta_0 = 8, nu = 5
 #' )
 #' }
@@ -40,14 +40,14 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   kp_B_0 <- t(inv_B_0) %x% inv_B_0
 
   d_beta <- init_student_t_differential(len_beta, len_beta)
-  d_beta$d_beta0 <- Matrix::Diagonal(len_beta)
+  d_beta$d_beta0 <- diag(len_beta)
   d_sigma2 <- init_student_t_differential(1, len_beta)
   d_sigma2$d_sigma2_0 <- matrix(1)
   d_Lambda <- init_student_t_differential(n^2, len_beta)
-  I_n <- Matrix::Diagonal(len_beta)
-  I_nn <- Matrix::Diagonal(len_beta^2)
-  K_nn <- commutation_matrix(len_beta)
-  elimL <- elimination_matrix(len_beta)
+  I_n <- diag(len_beta)
+  I_nn <- diag(len_beta^2)
+  K_nn <- matrixcalc::commutation.matrix(len_beta)
+  elimL <- matrixcalc::elimination.matrix(len_beta)
   runs_beta <- vector("list", num_steps)
   runs_sigma <- vector("list", num_steps)
   runs_d_beta <- vector("list", num_steps)
@@ -81,7 +81,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     d_bg <- ext_d_bg
     XTLy <- A_times_diag_v0(t(X), as.numeric(Lambda_g)) %*% y
     fac_1 <- XTLy / sigma_g^2 + inv_B_0_times_b_0
-    tfac_1 <- (t(fac_1) %x% Matrix::Diagonal(nrow(B_g)))
+    tfac_1 <- (t(fac_1) %x% diag(nrow(B_g)))
     fac_2 <- - (XTLy) / sigma_g^4
     fac_3 <- t(y) %x% t(X) / sigma_g^2
     d_bg$d_b0 <- tfac_1 %*% d_Bg$d_b0 + B_g %*% (fac_2 %*% d_sigma2$d_b0 + fac_3 %*% d_Lambda$d_b0 + inv_B_0)

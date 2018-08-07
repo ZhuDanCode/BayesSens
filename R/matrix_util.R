@@ -3,6 +3,7 @@ neg_tx_otimes_x <- function(A) {
 }
 
 commutation_matrix <- function(r, c) {
+  if (missing(c)) c <- r
   entries <- expand.grid(1:r, 1:c)
   src <- r * (entries[,2] - 1) + entries[,1]
   tgt <- c * (entries[,1] - 1) + entries[,2]

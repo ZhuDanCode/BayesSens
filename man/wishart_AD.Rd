@@ -48,9 +48,9 @@ data0 <- wishart_data(n, p, k,
                       Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
                       intercept_1 = TRUE, intercept_2 = TRUE)
 res <- wishart_AD(Xy = data0$Xy, y = data0$y,
-                  b_0 = rep(0, p + 2), B_0 = diag(p + 2),
+                  b_0 = numeric(p + 2), B_0 = diag(p + 2),
                   Xs = data0$Xs, s = data0$s,
-                  g_0 = rep(0, k + 1), G_0 = diag(k + 1),
+                  g_0 = numeric(k + 1), G_0 = diag(k + 1),
                   v_0 = 5, R_0 = diag(2),
                   num_steps = 1e3)
 }
