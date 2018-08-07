@@ -1,19 +1,26 @@
 Package: BayesSense
 Type: Package
 Title: Sensitivity analysis for Bayesian Inference
-Version: 0.2.8
+Version: 0.2.9
 Author: Liana Jacobi <ljacobi@unimelb.edu.au>, 
     Dan Zhu <dan.zhu@monash.edu>, 
     Chun Fung Kwok <kwokcf@unimelb.edu.au>,
     Kai-Yang Goh <kaiyanggoh@hotmail.com>
 Maintainer: Chun Fung Kwok <kcf.jackson@gmail.com>
-Description: This package computes local derivatives of Bayesian outputs, e.g. MCMC 
-    posterior estimates and performance measures, via Automatic 
-    differentiation. 
+Description: This package allows for a comprehensive local sensitivity analysis of MCMC 
+    output with respect to all input parameters (prior hyper-parameters and 
+    starting values) to assess prior robustness and algorithm convergence in 
+    models estimated via Gibbs samplers. It implements the forward method of 
+    Automatic Differentiation and exploits matrix and vector calculus results 
+    to compute large sets of Jacobian matrices that contain the first order 
+    derivatives of all MCMC draws with respect to all input parameters. It 
+    computes a range of sensitivity measures for posterior statistics such as 
+    prior robustness of posterior means and prediction intervals, as well as 
+    algorithm convergence measures bases on starting value sensitivities. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.0
 Suggests: testthat,
     knitr,
     rmarkdown
