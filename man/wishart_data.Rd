@@ -4,7 +4,7 @@
 \alias{wishart_data}
 \title{Simulate data from a 2-equation linear regression model with jointly Gaussian noise}
 \usage{
-wishart_data(n, p, k, beta, gamma, sigma, intercept_1 = TRUE,
+wishart_data(n, p, k, beta, gamma, Sigma, intercept_1 = TRUE,
   intercept_2 = TRUE)
 }
 \arguments{
@@ -22,14 +22,14 @@ should be the first element.}
 It shoud be of length (k+2) if 'intercept_2 = T'. The intercept should be
 the first element. The endogeneity factor should be the second element.}
 
-\item{sigma}{(optional) 2x2 numeric matrix; the covariance matrix of the distribution.}
+\item{Sigma}{(optional) 2x2 numeric matrix; the covariance matrix of the distribution.}
 
 \item{intercept_1}{TRUE or FALSE; whether to include an intercept / bias term.}
 
 \item{intercept_2}{TRUE or FALSE; whether to include an intercept / bias term.}
 }
 \value{
-A list of the data X, y, and the parameters beta, df.
+A list of the data X, y, Xs, s and the parameters beta, gamma and sigma.
 }
 \description{
 Simulate data from a 2-equation linear regression model with jointly Gaussian noise
@@ -38,5 +38,7 @@ Simulate data from a 2-equation linear regression model with jointly Gaussian no
 data0 <- wishart_data(n = 100, p = 10, k = 3)
 data1 <- wishart_data(n = 100, p = 2, k = 3,
   beta = c(0.2, -0.3, 0.4), gamma = c(0.2, 0.6, -0.2),
-  sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2), intercept_1 = FALSE, intercept_2 = FALSE)
+  Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
+  intercept_1 = FALSE, intercept_2 = FALSE
+)
 }

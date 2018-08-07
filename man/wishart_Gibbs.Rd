@@ -6,7 +6,7 @@
 priors for the means and inverse gamma for the variances.}
 \usage{
 wishart_Gibbs(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0, init_gamma,
-  init_sigma, num_steps = 10000)
+  init_Sigma, num_steps = 10000)
 }
 \arguments{
 \item{Xy}{A numeric matrix; the first set of covariates.}
@@ -31,11 +31,9 @@ wishart_Gibbs(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0, init_gamma,
 
 \item{init_gamma}{(Optional) A numeric vector; the starting value of the gamma parameter.}
 
-\item{init_sigma}{(Optional) A 2x2 symmetric matrix; the starting value of the sigma parameter.}
+\item{init_Sigma}{(Optional) A 2x2 symmetric matrix; the starting value of the Sigma parameter.}
 
 \item{num_steps}{Integer; number of MCMC steps.}
-
-\item{burn_ins}{Integer; number of burn-ins.}
 }
 \description{
 Model inference for Wishart regression model with multivariate normal
@@ -47,12 +45,12 @@ n <- 1000
 p <- 2
 k <- 3
 data0 <- wishart_data(n, p, k,
-                      sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
+                      Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
                       intercept_1 = TRUE, intercept_2 = TRUE)
 res <- wishart_Gibbs(Xy = data0$Xy, y = data0$y,
-                     b_0 = rnorm(p + 2), B_0 = pdmatrix(p + 2)$Sigma,
-                     Xs <- data0$Xs, s = data0$s,
-                     g_0 = rnorm(k + 1), G_0 = pdmatrix(k + 1)$Sigma,
-                     v_0 = 5, R_0 = pdmatrix(2)$Sigma)
+                     b_0 = rnorm(p + 2), B_0 = diag(p + 2),
+                     Xs = data0$Xs, s = data0$s,
+                     g_0 = rnorm(k + 1), G_0 = diag(k + 1),
+                     v_0 = 5, R_0 = diag(2))
 }
 }

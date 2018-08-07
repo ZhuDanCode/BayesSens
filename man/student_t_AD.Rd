@@ -28,8 +28,6 @@ student_t_AD(X, y, b_0, B_0, alpha_0, delta_0, nu, init_beta, init_sigma,
 \item{init_sigma}{(Optional) A positive number; the starting value of the sigma parameter.}
 
 \item{num_steps}{Integer; number of MCMC steps.}
-
-\item{burn_ins}{Integer; number of burn-ins.}
 }
 \description{
 Sensitivity analysis for student-t regression model with multivariate normal
