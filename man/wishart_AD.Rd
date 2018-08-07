@@ -5,8 +5,8 @@
 \title{Sensitivity analysis for Wishart regression model with multivariate normal
 prior for the means and inverse gamma for the variance.}
 \usage{
-wishart_AD(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0, init_gamma, init_Sigma,
-  num_steps = 10000)
+wishart_AD(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0, init_gamma,
+  init_Sigma, num_steps = 10000)
 }
 \arguments{
 \item{Xy}{A numeric matrix; the first set of covariates.}

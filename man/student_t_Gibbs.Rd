@@ -5,8 +5,8 @@
 \title{Model inference for student-t regression model with multivariate normal
 prior for the mean and inverse gamma for the variance.}
 \usage{
-student_t_Gibbs(X, y, b_0, B_0, alpha_0, delta_0, nu, init_beta, init_sigma,
-  num_steps = 10000)
+student_t_Gibbs(X, y, b_0, B_0, alpha_0, delta_0, nu, init_beta,
+  init_sigma, num_steps = 10000)
 }
 \arguments{
 \item{X}{A numeric matrix; the covariates.}

@@ -1,6 +1,6 @@
 ---
-title: "BayesSense: Gaussian distribution with independent Normal-Inverse Gamma priors"
-author: "[add author name]"
+title: "`BayesSense` Gaussian distribution with independent Normal-Inverse Gamma priors"
+# author: "[add author name]"
 date: "Last updated on: `r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
@@ -12,12 +12,13 @@ vignette: >
 ```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  fig.width=7, fig.height=5,
+  eval = T
 )
 ```
 
-In this vignette, we conduct Bayesian sensitivity analysis of the Gaussian distribution with independent Normal-Inverse Gamma priors.
-
+In this vignette, we introduce some basic functionalities of the `BayesSense` package to do Bayesian sensitivity analysis of the Gaussian distribution with independent Normal-Inverse Gamma priors.
 
 ## Content {#content}
 
@@ -25,14 +26,15 @@ In this vignette, we conduct Bayesian sensitivity analysis of the Gaussian distr
 2. [Model specification](#model_spec)
 3. [MCMC Inference](#mcmc_infer)
 4. [MCMC Sensitivity Analysis](#mcmc_sense)
-
+5. [Reference](#reference)
 
 ## 1. Data simulation {#data_sim}
-To begin with, we load the package and simulate some data from the gaussian model with the function `gaussian_data(n, p)`, where `n` is the number of datapoints, and `p` is the number of measurements per datapoint. There are two optional arguments `beta` and `sigma`, corresponding to the regression coefficients and variance in a classical linear regression model.
+To begin with, we load the package and simulate some data from the gaussian model with the function `gaussian_data(n, p)`, where `n` is the number of datapoints, and `p` is the number of measurements per datapoint. There are two optional arguments `beta` and `sigma`, corresponding to the regression coefficients and the variance in the classical linear regression model.
 
 ```{r}
 library(BayesSense)
-n <- 100
+set.seed(1234)  # For reproducibility 
+n <- 500
 p <- 3
 data0 <- gaussian_data(n, p, intercept = T)
 str(data0)
@@ -61,31 +63,74 @@ We fit the model using MCMC with the function `gaussian_Gibbs`. We need to provi
 res <- gaussian_Gibbs(
   X = data0$X, y = data0$y,
   b_0 = numeric(p+1), B_0 = diag(p+1), # add one for intercept
-  alpha_0 = 13, delta_0 = 8
+  alpha_0 = 13, delta_0 = 8, 
+  num_steps = 10000
 )
 ```
 
-The result contains the posterior samples of the parameters. 
+The result contains the 10000 posterior samples of the parameters. 
 ```{r}
 str(res)
 # Note that the number of MCMC iterations is set to be 10000 by default, so we have 10000 posterior samples for each parameter. 
 ```
 
-We can inspect the posterior distribution of the parameters individually with `hist`, or with `plot_posterior`
+We can inspect the posterior distribution of the parameters individually with `hist`, `density` or `plot_posterior`
 
-```{r, fig.width=7, fig.height=6}
+```{r}
+# Single plot
+hist(res$beta[,2], main = "Posterior distribution", prob = T)
+lines(density(res$beta[,2]), col = "blue", lwd = 2)
+abline(v = data0$beta[2], col = "red", lwd = 3)    # Actual coefficient
+# Multiple plots
 plot_posterior(res)
 ```
 
 
 ## 4. MCMC Sensitivity Analysis {#mcmc_sense}
-We conduct the sensitivity analysis using the `gaussian_AD` function; this function has exactly the same interface as `gaussian_Gibbs`.
+We conduct the sensitivity analysis using the `gaussian_AD` function; this function has exactly the same interface as `gaussian_Gibbs`. 
+In additional to the posterior samples, this function returns the sensitivity of posterior sample (at each iteration) w.r.t. the prior parameters.
 
 ```{r, results='hide'}
-res <- gaussian_Gibbs(
+res <- gaussian_AD(
   X = data0$X, y = data0$y,
-  b_0 = numeric(p+1), B_0 = diag(p+1), # add one for intercept
-  alpha_0 = 13, delta_0 = 8
+  b_0 = numeric(p+1), B_0 = diag(p+1),   # add one for intercept
+  alpha_0 = 13, delta_0 = 8,
+  num_steps = 1000
 )
 ```
+
+```{r}
+str(res)
+```
+
+One can directly manipulate the sensitivity results, or use the helper functions `available_sensitivity` and `get_sensitivity` to retrieve the sensitivities of interest. Here we consider $\dfrac{d \beta}{dB_0}$ as an example. 
+
+```{r}
+available_sensitivity(res)
+
+d_beta_on_d_B0 <- get_sensitivity(res, "d_beta", "d_B0")
+str(d_beta_on_d_B0)  # dimension = mcmc steps x length(beta) x length(B_0)
+```
+
+Using the matrix calculus notation in [Magnus and Neudecker (1988)](#reference), $\dfrac{d \beta}{dB_0}$ is understood as $\dfrac{d \,vec(\beta)}{d\,vec(B_0)^T}$, where $vec$ denotes the vectorisation operator. 
+Next, since $\beta$ has $4$ elements, and $B_0$ have $16$ elements, $\dfrac{d \beta}{dB_0}$ is a $4 \times 16$ matrix, with the $(i,j)$ term representing the sensitivity 
+$\dfrac{d \beta^{i}}{dB_0^{j}}$, where $i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16$. 
+
+We can now examine how sensitive the posterior mean is to a change in the, say $(1,1)$, entry of covariance matrix $B_0$. 
+
+```{r}
+sens <- d_beta_on_d_B0[1:500, 1, 1]      # First 500 iterations
+csens <- cumsum(sens) / seq_along(sens)  # posterior mean
+plot(csens, type = "l", 
+     main = "Sensitivity of the Posterior Mean",
+     xlab = "Iterations", ylab = "Derivative")
+points(csens)
+```
+
+
+### Note: Vectorisation operator $vec$
+Suppose $A = \left[\begin{array}{cc} a &b \\ c &d \end{array}\right]$, then $vec(A) = \left[\begin{array}{c} a \\c \\ b \\d \end{array}\right]$.
+
+## 5. Reference {#reference}
+Magnus, J. R., & Neudecker, H. (1988). Matrix differential calculus with applications in statistics and econometrics. *Wiley series in probability and mathematical statistics.*
 

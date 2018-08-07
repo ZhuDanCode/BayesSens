@@ -100,7 +100,7 @@ wishart_Gibbs <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
 
   # Tidy format - extract a from b
   extract_from <- function(a, b) {
-    map_reduce(b, ~.x %>% extract2(a) %>% as.vector(), rbind)
+    map_reduce(b, ~.x %>% magrittr::extract2(a) %>% as.vector(), rbind)
   }
   map_named(c("beta", "gamma", "Sigma"), ~extract_from(.x, res))
 }

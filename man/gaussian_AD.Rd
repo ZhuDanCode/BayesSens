@@ -5,7 +5,8 @@
 \title{Sensitivity analysis for normal regression model with multivariate normal
 prior for the mean and inverse gamma for the variance.}
 \usage{
-gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, init_sigma, num_steps = 1000)
+gaussian_AD(X, y, b_0, B_0, alpha_0, delta_0, init_sigma,
+  num_steps = 1000)
 }
 \arguments{
 \item{X}{A numeric matrix; the covariates.}
