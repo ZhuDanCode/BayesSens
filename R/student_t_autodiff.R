@@ -10,20 +10,19 @@
 #' @param init_beta (Optional) A numeric vector; the starting value of the beta parameter.
 #' @param init_sigma (Optional) A positive number; the starting value of the sigma parameter.
 #' @param num_steps Integer; number of MCMC steps.
-#' @param burn_ins Integer; number of burn-ins.
 #' @examples
 #' \dontrun{
-#' n <- 100
-#' p <- 10
+#' n <- 50
+#' p <- 3
 #' data0 <- student_t_data(n, p, intercept = TRUE)
 #' res <- student_t_AD(data0$X, data0$y,
-#'   b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for intercept
+#'   b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for intercept
 #'   alpha_0 = 13, delta_0 = 8, nu = 5
 #' )
 #' }
 #' @export
 student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
-                            init_beta, init_sigma, num_steps = 1e4, burn_ins = 1e3) {
+                         init_beta, init_sigma, num_steps = 1e4) {
   if (missing(init_sigma))
     init_sigma <- 1 / sqrt(rgamma(1, alpha_0 / 2, delta_0 / 2))
   if (missing(init_beta))
@@ -39,21 +38,18 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
   inv_B_0 <- solve(B_0)
   inv_B_0_times_b_0 <- inv_B_0 %*% b_0
   kp_B_0 <- t(inv_B_0) %x% inv_B_0
-  keep <- num_steps - burn_ins
-  assertthat::assert_that(
-    keep > 0, msg = sprintf("num_steps = %d <= %d = burn_ins", num_steps, burn_ins)
-  )
 
   d_beta <- init_student_t_differential(len_beta, len_beta)
-  d_beta$d_beta0 <- diag(len_beta)
+  d_beta$d_beta0 <- Matrix::Diagonal(len_beta)
   d_sigma2 <- init_student_t_differential(1, len_beta)
   d_sigma2$d_sigma2_0 <- matrix(1)
   d_Lambda <- init_student_t_differential(n^2, len_beta)
-  I_n <- diag(len_beta)
-  I_nn <- diag(len_beta^2)
-  K_nn <- matrixcalc::commutation.matrix(len_beta)
-  elimL <- matrixcalc::elimination.matrix(len_beta)
-  runs_param <- vector("list", num_steps)
+  I_n <- Matrix::Diagonal(len_beta)
+  I_nn <- Matrix::Diagonal(len_beta^2)
+  K_nn <- commutation_matrix(len_beta)
+  elimL <- elimination_matrix(len_beta)
+  runs_beta <- vector("list", num_steps)
+  runs_sigma <- vector("list", num_steps)
   runs_d_beta <- vector("list", num_steps)
   runs_d_sigma2 <- vector("list", num_steps)
 
@@ -67,7 +63,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     XTLX <- A_times_diag_v0(t(X), as.numeric(Lambda_g)) %*% X
     inv_A <- solve(XTLX / sigma_g^2 + inv_B_0)  # intermediate variable
     fac_1 <- - (t(inv_A) %x% inv_A)
-    fac_2 <- - matrixcalc::vec(XTLX) / sigma_g^4
+    fac_2 <- - as.numeric(XTLX) / sigma_g^4
     fac_2b <- sigma_g^(-2) * (t(X) %x% t(X))
     fac_3 <- fac_1 %*% fac_2
     fac_3b <- fac_1 %*% fac_2b
@@ -85,7 +81,7 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     d_bg <- ext_d_bg
     XTLy <- A_times_diag_v0(t(X), as.numeric(Lambda_g)) %*% y
     fac_1 <- XTLy / sigma_g^2 + inv_B_0_times_b_0
-    tfac_1 <- (t(fac_1) %x% diag(nrow(B_g)))
+    tfac_1 <- (t(fac_1) %x% Matrix::Diagonal(nrow(B_g)))
     fac_2 <- - (XTLy) / sigma_g^4
     fac_3 <- t(y) %x% t(X) / sigma_g^2
     d_bg$d_b0 <- tfac_1 %*% d_Bg$d_b0 + B_g %*% (fac_2 %*% d_sigma2$d_b0 + fac_3 %*% d_Lambda$d_b0 + inv_B_0)
@@ -239,18 +235,18 @@ student_t_AD <- function(X, y, b_0, B_0, alpha_0, delta_0, nu,
     d_sigma2 <- deriv_sigma2(beta_g, delta_g, g, alpha_1, d_beta, Lambda_g, d_Lambda)
 
     # Keep track
-    runs_param[[i]] <- list(beta = beta_g, sigma = sigma_g)
+    runs_beta[[i]] <- beta_g
+    runs_sigma[[i]] <- sigma_g
     runs_d_beta[[i]] <- d_beta
     runs_d_sigma2[[i]] <- d_sigma2
     setTxtProgressBar(pb, i)
   }
 
-  # Tidy format
   list(
-    sigma = runs_param %>% purrr::map_dbl(~.x$sigma) %>% tail(keep),
-    beta = runs_param %>% purrr::map(~t(.x$beta)) %>% tail(keep) %>% do.call(rbind, .),
-    d_sigma2 = runs_d_sigma2 %>% tail(keep) %>% tidy_student_t_differential(),
-    d_beta = runs_d_beta %>% tail(keep) %>% tidy_student_t_differential()
+    beta = map_reduce(runs_beta, t, rbind),
+    sigma = map_reduce(runs_sigma, t, rbind),
+    d_beta = tidy_list(runs_d_beta),
+    d_sigma2 = tidy_list(runs_d_sigma2)
   )
 }
 
@@ -264,23 +260,5 @@ init_student_t_differential <- function(len0, l_b0) {
     d_nu = zeros(len0, 1),
     d_beta0 = zeros(len0, l_b0),
     d_sigma2_0 = zeros(len0, 1)
-  )
-}
-
-
-tidy_student_t_differential <- function(dlist0) {
-  extract_rbind <- function(attr0) {
-    dlist0 %>%
-      purrr::map(~t(matrixcalc::vec(.x[[attr0]]))) %>%
-      do.call(rbind, .)
-  }
-  list(
-    d_b0 = extract_rbind("d_b0"),
-    d_B0 = extract_rbind("d_B0"),
-    d_alpha0 = extract_rbind("d_alpha0"),
-    d_delta0 = extract_rbind("d_delta0"),
-    d_nu = extract_rbind("d_nu"),
-    d_beta0 = extract_rbind("d_beta0"),
-    d_sigma2_0 = extract_rbind("d_sigma2_0")
   )
 }

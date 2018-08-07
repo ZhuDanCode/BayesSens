@@ -40,7 +40,8 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
   d_sigma2 <- init_gauss_differential(length(sigma_g))
   d_sigma2$d_sigma2_0 <- matrix(1)
   # Variables to keep track
-  runs_param <- vector("list", num_steps)
+  runs_beta <- vector("list", num_steps)
+  runs_sigma <- vector("list", num_steps)
   runs_d_beta <- vector("list", num_steps)
   runs_d_sigma2 <- vector("list", num_steps)
 
@@ -149,18 +150,18 @@ gaussian_AD <- function(X, y, b_0, B_0, alpha_0, delta_0,
     d_sigma2 <- deriv_sigma2(beta_g, delta_g, G, alpha_1, d_beta)
 
     # Keep track
-    runs_param[[i]] <- list(beta = beta_g, sigma = sigma_g)
+    runs_beta[[i]] <- beta_g
+    runs_sigma[[i]] <- sigma_g
     runs_d_beta[[i]] <- d_beta
     runs_d_sigma2[[i]] <- d_sigma2
     setTxtProgressBar(pb, i)
   }
 
   # Tidy format
-  append(
-    tidy_list(runs_param),
-    list(
-      d_sigma2 = tidy_list(runs_d_sigma2),
-      d_beta = tidy_list(runs_d_beta)
-    )
+  list(
+    beta = map_reduce(runs_beta, t, rbind),
+    sigma = map_reduce(runs_sigma, t, rbind),
+    d_beta = tidy_list(runs_d_beta),
+    d_sigma2 = tidy_list(runs_d_sigma2)
   )
 }

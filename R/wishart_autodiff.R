@@ -1,28 +1,3 @@
-# library(BayesSense)
-# library(magrittr)
-# library(Rcpp)
-# source("./R/autodiff_tools.R")
-# source("./R/matrix_util.R")
-# sourceCpp("./src/matrix_util.cpp")
-#
-#
-#
-# data0 <- wishart_data(n = 100, p = 2, k = 3)
-# Xy<-data0$Xy
-# y<-data0$y
-# Xs<-data0$Xs
-# s<-data0$s
-#
-# b_0 <- rnorm(4) #p+2 add 1 for intercept, 1 for endogeneity
-# B_0 <- pdmatrix(4)$Sigma
-# g_0 <- rnorm(4) #k+1 add 1 for intercept
-# G_0 <- pdmatrix(4)$Sigma
-# v_0 <- 5
-# R_0 <- pdmatrix(2)$Sigma
-#
-# num_steps <- 1e1
-# burn_ins <- 0
-
 #' Sensitivity analysis for Wishart regression model with multivariate normal
 #' prior for the means and inverse gamma for the variance.
 #' @param Xy A numeric matrix; the first set of covariates.
@@ -36,44 +11,37 @@
 #' @param v_0 A positive number; the degrees of freedom of the Wishart prior.
 #' @param R_0 A 2x2 symmetric matrix; the scale matrix of the Wishart prior.
 #' @param init_gamma (Optional) A numeric vector; the starting value of the gamma parameter.
-#' @param init_sigma (Optional) A 2x2 symmetric matrix; the starting value of the sigma parameter.
+#' @param init_Sigma (Optional) A 2x2 symmetric matrix; the starting value of the sigma parameter.
 #' @param num_steps Integer; number of MCMC steps.
-#' @param burn_ins Integer; number of burn-ins.
 #' @examples
 #' \dontrun{
 #' n <- 1000
 #' p <- 2
 #' k <- 3
 #' data0 <- wishart_data(n, p, k,
-#'                       sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
+#'                       Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
 #'                       intercept_1 = TRUE, intercept_2 = TRUE)
 #' res <- wishart_AD(Xy = data0$Xy, y = data0$y,
-#'                      b_0 = rep(0, p + 2), B_0 = diag(p + 2),
-#'                      Xs = data0$Xs, s = data0$s,
-#'                      g_0 = rep(0, k + 1), G_0 = diag(k + 1),
-#'                      v_0 = 5, R_0 = diag(2),
-#'                      num_steps = 1e3, burn_ins = 0)
+#'                   b_0 = rep(0, p + 2), B_0 = diag(p + 2),
+#'                   Xs = data0$Xs, s = data0$s,
+#'                   g_0 = rep(0, k + 1), G_0 = diag(k + 1),
+#'                   v_0 = 5, R_0 = diag(2),
+#'                   num_steps = 1e3)
 #' }
 #' @export
-
-
-
 wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
-                       init_gamma, init_sigma, num_steps = 1e4, burn_ins = 1e3) {
+                       init_gamma, init_Sigma, num_steps = 1e4) {
   if (missing(init_gamma))
     init_gamma <- g_0 + t(chol(G_0)) %*% rnorm(length(g_0)) %>% as.vector()
-  if (missing(init_sigma))
+  if (missing(init_Sigma))
     init_Sigma <- matrix(rWishart(1, v_0, R_0), 2, 2)
 
   # Initialisation
   n <- length(y)
   v_1 <- v_0 + n
   gamma <- init_gamma
-  inv_Sigma <- init_Sigma
   Sigma <- solve(init_Sigma)
 
-
-  keep <- num_steps - burn_ins
   res_beta <- matrix(0, num_steps,length(b_0))
   res_gamma <- matrix(0, num_steps,length(g_0))
   res_Sigma <- matrix(0, num_steps,4)
@@ -84,7 +52,6 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
 
   len_b0 <- length(b_0)
   len_g0 <- length(g_0)
-
 
   #Precomputations
   invB_0 <- solve(B_0)
@@ -152,22 +119,21 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
   d_b0 <- init_deriv(length(b_0))
   diag(d_b0$d_b0) <- 1
   d_B0 <- init_deriv(length(B_0))
-  diag(d_B0$d_B0) <- 1
+  d_B0$d_B0 <- differential_matrix(nrow(B_0))
   d_g0 <- init_deriv(length(g_0))
   diag(d_g0$d_g0) <- 1
   d_G0 <- init_deriv(length(G_0))
-  diag(d_G0$d_G0) <- 1
+  d_G0$d_G0 <- differential_matrix(nrow(G_0))
   d_R0 <- init_deriv(length(R_0))
-  diag(d_R0$d_R0) <- 1
+  d_R0$d_R0 <- differential_matrix(nrow(R_0))
   d_gamma <- init_deriv(length(init_gamma))
   diag(d_gamma$d_gamma0) <- 1
-  d_Sigma <- d_inv_Sigma <- init_deriv(length(init_Sigma))
-  diag(d_Sigma$d_Sigma0) <- 1
-  d_inv_Sigma$d_Sigma0 <- - t(inv_Sigma) %x% inv_Sigma
+  d_Sigma <- init_deriv(length(init_Sigma))
+  d_Sigma$d_Sigma0 <- differential_matrix(nrow(init_Sigma))
 
-  d_invB_0 <- d_inv(invB_0, d_B0, tinvB_0_x_invB_0)
+  d_invB_0 <- d_inv(invB_0, d_B0, - tinvB_0_x_invB_0)
   d_invB_0_b_0 <- d_product(invB_0, d_invB_0, b_0, d_b0)
-  d_invG_0 <- d_inv(invG_0, d_G0, tinvG_0_x_invG_0)
+  d_invG_0 <- d_inv(invG_0, d_G0, - tinvG_0_x_invG_0)
   d_invG_0_g_0 <- d_product(invG_0, d_invG_0, g_0, d_g0)
   invR_0 <- solve(R_0)
   d_invR_0 <- d_inv(invR_0, d_R0)
@@ -204,33 +170,25 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
     d_sigma12 <- lapply(d_Sigma, function(x) t(matrix(x[2, ])))
     d_sigma21 <- lapply(d_Sigma, function(x) t(matrix(x[3, ])))
     d_sigma22 <- lapply(d_Sigma, function(x) t(matrix(x[4, ])))
-    d_sigma12_on_sigma22 <- d_constant_divide_constant(
-      sigma12, d_sigma12, sigma22, d_sigma22
+    d_sigma12_sigma21 <- d_constant_multiply_constant(
+      sigma12, d_sigma12,
+      sigma21, d_sigma21
     )
-    d_sigma12_on_sigma11 <- d_constant_divide_constant(
-      sigma12, d_sigma12, sigma11, d_sigma11
+    d_sigma12_sigma21_on_sigma22 <- d_constant_divide_constant(
+      sigma12 * sigma21, d_sigma12_sigma21,
+      sigma22, d_sigma22
+    )
+    d_sigma12_sigma21_on_sigma11 <- d_constant_divide_constant(
+      sigma12 * sigma21, d_sigma12_sigma21,
+      sigma11, d_sigma11
     )
     d_invw11 <- d_constant_inv(
       1 / (sigma11 - sigma12 * sigma21 / sigma22),
-      d_minus(
-        d_sigma11,
-        d_constant_multiply_constant(
-          sigma21, d_sigma21,
-          sigma12 / sigma22, d_sigma12_on_sigma22
-        )
-      )
+      d_minus(d_sigma11, d_sigma12_sigma21_on_sigma22)
     )
     d_invw22 <- d_constant_inv(
       1 / (sigma22 - sigma12 * sigma21 / sigma11),
-      d_minus(
-        d_sigma22,
-        d_constant_multiply_constant(
-          sigma21, d_sigma21,
-          sigma12 / sigma11, d_constant_divide_constant(
-            sigma12, d_sigma12, sigma11, d_sigma11
-          )
-        )
-      )
+      d_minus(d_sigma22, d_sigma12_sigma21_on_sigma11)
     )
 
     #Update beta
@@ -238,21 +196,29 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
     invw11_XyTXy <- invw11 * XyTXy
     Bg <- solve(invB_0 + invw11_XyTXy)
     #Update d_Bg
-    d_Bg <- d_invB_0 %>%
-      d_sum(d_constant_multiply_matrix(invw11, d_invw11, XyTXy, d_XyTXy)) %>%
-      d_inv(Bg, .)
+    d_invw11_XyTXy <- d_constant_multiply_matrix(invw11, d_invw11, XyTXy, d_XyTXy)
+    d_Bg <- d_inv(Bg, d_sum(d_invB_0, d_invw11_XyTXy))
+
     #Update bg
     b2 <- XyTs - XyTXs %*% gamma
-    b4 <- XyTy - sigma12 / sigma22 * b2
-    b7 <- invB_0_b_0 + invw11 * (b4)
+    b4 <- XyTy - sigma12 * sigma21 / sigma22 * b2
+    b7 <- invB_0_b_0 + invw11 * b4
     bg <- Bg %*% b7
     #Update d_bg
-    d_bg <- d_minus(d_XyTs, d_product(XyTXs, d_XyTXs, gamma, d_gamma)) %>%
-      d_constant_multiply_matrix(sigma12 / sigma22, d_sigma12_on_sigma22, b2, .) %>%
-      d_minus(d_XyTy, .) %>%
-      d_constant_multiply_matrix(invw11, d_invw11, b4, .) %>%
-      d_sum(d_invB_0_b_0) %>%
-      d_product(Bg, d_Bg, b7, .)
+    d_b2 <- d_minus(d_XyTs, d_product(XyTXs, d_XyTXs, gamma, d_gamma))
+    d_b4 <- d_minus(
+      d_XyTy,
+      d_constant_multiply_matrix(
+        sigma12 * sigma21 / sigma22, d_sigma12_sigma21_on_sigma22,
+        b2, d_b2
+      )
+    )
+    d_b7 <- d_sum(
+      d_invB_0_b_0,
+      d_constant_multiply_matrix(invw11, d_invw11, b4, d_b4)
+    )
+    d_bg <-  d_product(Bg, d_Bg, b7, d_b7)
+
     #Update betag
     chol_Bg <- t(chol(Bg))
     beta <- bg + chol_Bg %*% Zy[, i]
@@ -265,21 +231,28 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
     invw22_XsTXs <- invw22 * XsTXs
     Gg <- solve(invG_0 + invw22_XsTXs)
     #Update d_Gg
-    d_Gg <- d_invG_0 %>%
-      d_sum(d_constant_multiply_matrix(invw22, d_invw22, XsTXs, d_XsTXs)) %>%
-      d_inv(Gg, .)
+    d_invw22_XsTXs <- d_constant_multiply_matrix(
+      invw22, d_invw22, XsTXs, d_XsTXs
+    )
+    d_Gg <- d_inv(Gg, d_sum(d_invG_0, d_invw22_XsTXs))
+
     #Update gg
     g2 <- XsTy - XsTXy %*% beta
-    g4 <- XsTs - sigma12 / sigma11 * g2
+    g4 <- XsTs - sigma12 * sigma21 / sigma11 * g2
     g7 <- invG_0_g_0 + invw22 * g4
     gg <- Gg %*% g7
     #Update d_gg
-    d_gg <- d_minus(d_XsTy, d_product(XsTXy, d_XsTXy, beta, d_beta)) %>%
-      d_constant_multiply_matrix(sigma12 / sigma11, d_sigma12_on_sigma11, g2, .) %>%
-      d_minus(d_XsTs, .) %>%
-      d_constant_multiply_matrix(invw22, d_invw22, g4, .) %>%
-      d_sum(d_invG_0_g_0) %>%
-      d_product(Gg, d_Gg, g7, .)
+    d_g2 <- d_minus(d_XsTy, d_product(XsTXy, d_XsTXy, beta, d_beta))
+    d_g4 <- d_minus(d_XsTs, d_constant_multiply_matrix(
+      sigma12 * sigma21 / sigma11, d_sigma12_sigma21_on_sigma11,
+      g2, d_g2
+    ))
+    d_g7 <- d_sum(
+      d_invG_0_g_0,
+      d_constant_multiply_matrix(invw22, d_invw22, g4, d_g4)
+    )
+    d_gg <- d_product(Gg, d_Gg, g7, d_g7)
+
     #Update gammag
     chol_Gg <- t(chol(Gg))
     gamma <- gg + chol_Gg %*% Zs[, i]
@@ -292,16 +265,13 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
     delta <- matrix(c(beta, rep(0, len_b0 + len_g0), gamma), ncol = 2)
     vTX_delta <- vTX %*% delta
     X_delta <- X %*% delta
-    deltaT_XT <- t(X_delta)
-    R <- invR_0 + vTv - vTX_delta - t(vTX_delta) + deltaT_XT %*% X_delta
+    R <- invR_0 + vTv - vTX_delta - t(vTX_delta) + crossprod(X_delta)
     inv_R <- solve(R)
 
     #Update d_Rg
     d_delta <- add_zeros(d_beta, len_b0 + len_g0, d_gamma)
-    d_vTX_delta <- d_product(vTX, d_vTX, delta, d_delta)
     R1 <- v - X_delta
     R2 <- t(R1) %*% R1
-
     d_R1 <- d_minus(d_v, d_product(X, d_X, delta, d_delta))
     d_R2 <- d_XXT(t(R1), d_transpose(R1, d_R1))
     d_R <- d_sum(d_R2, d_invR_0)
@@ -313,6 +283,7 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
     LA <- L %*% A
     invSigma <- LA %*% t(LA)
     Sigma <- solve(invSigma)
+
     #Update d_Sigmag
     d_L <- d_chol(L, d_inv_R, I_22, K_22, I_2, E_2, EIK_22)
     d_A <- init_deriv(length(A))
@@ -326,11 +297,7 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
       })
     )))
     d_invSigma <- d_XXT(LA, d_product(L, d_L, A, d_A))
-    d_Sigma_on_d_invSigma <- - t(Sigma) %x% Sigma
-    d_Sigma <- apply_chain(
-      . %>% {d_Sigma_on_d_invSigma %*% d_invSigma[[.]]},
-      names(d_invSigma)
-    )
+    d_Sigma <- d_inv(Sigma, d_invSigma)
 
     # Keep track
     res_beta[i, ] <- beta
@@ -346,12 +313,13 @@ wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
   return(list(beta = res_beta,
               gamma = res_gamma,
               Sigma = res_Sigma,
-              d_beta = runs_d_beta %>% tail(keep) %>% tidy_wishart_differential(),
-              d_gamma = runs_d_gamma %>% tail(keep) %>% tidy_wishart_differential(),
-              d_Sigma = runs_d_Sigma %>% tail(keep) %>% tidy_wishart_differential()))
+              d_beta = tidy_list(runs_d_beta),
+              d_gamma = tidy_list(runs_d_gamma),
+              d_Sigma = tidy_list(runs_d_Sigma)))
 }
 
-add_zeros <- function(a, n, b){ #function to stack elements of list a and b with n zeros in between
+add_zeros <- function(a, n, b) {
+  # function to stack elements of list a and b with n zeros in between
   purrr::map(
     1:length(a),
     function(x) {
@@ -364,21 +332,3 @@ add_zeros <- function(a, n, b){ #function to stack elements of list a and b with
 }
 
 get_lower_tri <- . %>% {.[upper.tri(., T)] <- 0; .}
-
-tidy_wishart_differential <- function(dlist0) {
-  extract_rbind <- function(attr0) {
-    dlist0 %>%
-      purrr::map(~as.numeric(.x[[attr0]])) %>%
-      do.call(rbind, .)
-  }
-  list(
-    d_gamma0 = extract_rbind("d_gamma0"),
-    d_Sigma0 = extract_rbind("d_Sigma0"),
-    d_b0 = extract_rbind("d_b0"),
-    d_B0 = extract_rbind("d_B0"),
-    d_g0 = extract_rbind("d_g0"),
-    d_G0 = extract_rbind("d_G0"),
-    d_v0 = extract_rbind("d_v0"),
-    d_R0 = extract_rbind("d_R0")
-  )
-}
