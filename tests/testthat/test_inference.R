@@ -3,6 +3,7 @@ library(BayesSense)
 
 test_that("gaussian_Gibbs", {
   # skip_on_cran()
+  skip_if_not(Sys.getenv("run_all_tests", TRUE))
   n <- 1000
   p <- 5
   set.seed(123)
@@ -23,6 +24,7 @@ test_that("gaussian_Gibbs", {
 
 test_that("student_t_Gibbs", {
   # skip_on_cran()
+  skip_if_not(Sys.getenv("run_all_tests", TRUE))
   n <- 1000
   p <- 5
   set.seed(123)
