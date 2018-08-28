@@ -41,3 +41,6 @@ res <- gaussian_AD(
 )
 }
 }
+\references{
+Jacobi, Liana and Joshi, Mark S. and Zhu, Dan, Automated Sensitivity Analysis for Bayesian Inference via Markov Chain Monte Carlo: Applications to Gibbs Sampling (February 9, 2018). Available at SSRN: https://ssrn.com/abstract=2984054 or http://dx.doi.org/10.2139/ssrn.2984054
+}
