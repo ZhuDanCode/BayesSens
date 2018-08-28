@@ -1,4 +1,4 @@
-#' Simulate data from a 2-equation linear regression model with jointly Gaussian noise
+#' Simulate data from a 2-equation SUR (seemingly unrelated regression) model with jointly Gaussian noise
 #' @param n integer; number of datapoints.
 #' @param p integer; number of measurements of first set of covariates.
 #' @param k integer; number of measurements of second set of covariates.
@@ -13,14 +13,14 @@
 #' @param intercept_2 TRUE or FALSE; whether to include an intercept / bias term.
 #' @return A list of the data X, y, Xs, s and the parameters beta, gamma and sigma.
 #' @examples
-#' data0 <- wishart_data(n = 100, p = 10, k = 3)
-#' data1 <- wishart_data(n = 100, p = 2, k = 3,
+#' data0 <- SUR2_data(n = 100, p = 10, k = 3)
+#' data1 <- SUR2_data(n = 100, p = 2, k = 3,
 #'   beta = c(0.2, -0.3, 0.4), gamma = c(0.2, 0.6, -0.2),
 #'   Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
 #'   intercept_1 = FALSE, intercept_2 = FALSE
 #' )
 #' @export
-wishart_data <- function(n, p, k, beta, gamma, Sigma,
+SUR2_data <- function(n, p, k, beta, gamma, Sigma,
                          intercept_1 = TRUE, intercept_2 = TRUE) {
 
   num_covariates_1 <- ifelse(intercept_1, p + 2, p + 1)

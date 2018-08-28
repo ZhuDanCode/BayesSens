@@ -1,4 +1,4 @@
-#' Sensitivity analysis for Wishart regression model with multivariate normal
+#' Sensitivity analysis for 2-equation SUR (seemingly unrelated regression) model with multivariate normal
 #' prior for the means and inverse gamma for the variance.
 #' @param Xy A numeric matrix; the first set of covariates.
 #' @param y A numeric vector; the response variable for the first set of covariates.
@@ -18,10 +18,10 @@
 #' n <- 1000
 #' p <- 2
 #' k <- 3
-#' data0 <- wishart_data(n, p, k,
+#' data0 <- SUR2_data(n, p, k,
 #'                       Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
 #'                       intercept_1 = TRUE, intercept_2 = TRUE)
-#' res <- wishart_AD(Xy = data0$Xy, y = data0$y,
+#' res <- SUR2_AD(Xy = data0$Xy, y = data0$y,
 #'                   b_0 = numeric(p + 2), B_0 = diag(p + 2),
 #'                   Xs = data0$Xs, s = data0$s,
 #'                   g_0 = numeric(k + 1), G_0 = diag(k + 1),
@@ -29,7 +29,8 @@
 #'                   num_steps = 1e3)
 #' }
 #' @export
-wishart_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
+#' @references Jacobi, Liana and Joshi, Mark S. and Zhu, Dan, Automated Sensitivity Analysis for Bayesian Inference via Markov Chain Monte Carlo: Applications to Gibbs Sampling (February 9, 2018). Available at SSRN: https://ssrn.com/abstract=2984054 or http://dx.doi.org/10.2139/ssrn.2984054
+SUR2_AD <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
                        init_gamma, init_Sigma, num_steps = 1e4) {
   if (missing(init_gamma))
     init_gamma <- g_0 + t(chol(G_0)) %*% rnorm(length(g_0)) %>% as.vector()

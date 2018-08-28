@@ -1,4 +1,4 @@
-#' Model inference for Wishart regression model with multivariate normal
+#' Model inference for 2-equation SUR (seemingly unrelated regression) model with multivariate normal
 #' priors for the means and inverse gamma for the variances.
 #' @param Xy A numeric matrix; the first set of covariates.
 #' @param y A numeric vector; the response variable for the first set of covariates.
@@ -18,17 +18,17 @@
 #' n <- 1000
 #' p <- 2
 #' k <- 3
-#' data0 <- wishart_data(n, p, k,
+#' data0 <- SUR2_data(n, p, k,
 #'                       Sigma = matrix(c(1, 0.2, 0.2, 1), 2, 2),
 #'                       intercept_1 = TRUE, intercept_2 = TRUE)
-#' res <- wishart_Gibbs(Xy = data0$Xy, y = data0$y,
+#' res <- SUR2_Gibbs(Xy = data0$Xy, y = data0$y,
 #'                      b_0 = rnorm(p + 2), B_0 = diag(p + 2),
 #'                      Xs = data0$Xs, s = data0$s,
 #'                      g_0 = rnorm(k + 1), G_0 = diag(k + 1),
 #'                      v_0 = 5, R_0 = diag(2))
 #' }
 #' @export
-wishart_Gibbs <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
+SUR2_Gibbs <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
                           init_gamma, init_Sigma, num_steps = 1e4) {
   if (missing(init_gamma))
     init_gamma <- g_0 + t(chol(G_0)) %*% rnorm(length(g_0)) %>% as.vector()
