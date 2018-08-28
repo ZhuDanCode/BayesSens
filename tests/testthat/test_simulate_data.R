@@ -1,4 +1,4 @@
-context("Testing simulation functions work for Gaussian, Student-t and Wishart.")
+context("Testing simulation functions work for Gaussian, Student-t and SUR2.")
 
 test_that("gaussian_data", {
   data0 <- gaussian_data(100, 10)
@@ -20,8 +20,8 @@ test_that("student_t_data", {
   expect_gt(data0$df, 0)
 })
 
-test_that("wishart_data", {
-  data0 <- wishart_data(100, 10, 3)
+test_that("SUR2_data", {
+  data0 <- SUR2_data(100, 10, 3)
   expect_equal(length(data0), 7)
   expect_equal(names(data0), c("Xy", "y", "beta", "Xs", "s", "gamma", "Sigma"))
   expect_equal(any(is.na(data0$Xy)), FALSE)

@@ -1,7 +1,7 @@
-context("wishart: Check Auto-differentiation results are consistent with Numerical differentiation")
+context("SUR2: Check Auto-differentiation results are consistent with Numerical differentiation")
 library(BayesSense)
 
-# Wishart Gibbs with Wishart draws implemented via Bartlett's decomposition.
+# SUR2 Gibbs with Wishart draws implemented via Bartlett's decomposition.
 # This function is needed to align with the implementation in the Autodiff function.
 test_fun <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
                      init_gamma, init_Sigma, num_steps = 1e4) {
@@ -116,7 +116,7 @@ test_diff <- function(num_diff, auto_diff) {
   expect_true(all(abs(x - y) < 1e-5))
 }
 
-testthat::test_that("Testing Wishart autodiff", {
+testthat::test_that("Testing SUR2 autodiff", {
   # skip_on_cran()
   skip_if_not(Sys.getenv("run_all_tests", TRUE))
   #======================== Generate data ==========================================
@@ -127,7 +127,7 @@ testthat::test_that("Testing Wishart autodiff", {
   beta <- rnorm(p + 2)
   gamma <- rnorm(k + 1)
   Sigma <- matrix(c(1, 0.2, 0.2, 1), 2, 2)
-  data0 <- wishart_data(n, p, k, beta = beta, gamma = gamma, Sigma = Sigma,
+  data0 <- SUR2_data(n, p, k, beta = beta, gamma = gamma, Sigma = Sigma,
                         intercept_1 = TRUE, intercept_2 = TRUE)
 
   #======================= Generate parameters =====================================
@@ -147,7 +147,7 @@ testthat::test_that("Testing Wishart autodiff", {
   base_case <- do.call(test_fun, default_parameters)
 
   set.seed(seed)
-  res <- do.call(wishart_AD, append(default_parameters, list(num_steps = 2e3)))
+  res <- do.call(SUR2_AD, append(default_parameters, list(num_steps = 2e3)))
 
   #================ Check sensitivity of beta, gamma and Sigma wrt b0 ==================
   print("Sensitivity of beta, gamma, Sigma wrt b0")
