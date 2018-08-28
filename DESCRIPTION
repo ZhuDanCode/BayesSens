@@ -2,21 +2,23 @@ Package: BayesSense
 Type: Package
 Title: Sensitivity analysis for Bayesian Inference
 Version: 0.2.9
-Author: Liana Jacobi <ljacobi@unimelb.edu.au>, 
-    Dan Zhu <dan.zhu@monash.edu>, 
-    Chun Fung Kwok <kwokcf@unimelb.edu.au>,
-    Kai-Yang Goh <kaiyanggoh@hotmail.com>
-Maintainer: Chun Fung Kwok <kcf.jackson@gmail.com>
-Description: This package allows for a comprehensive local sensitivity analysis of MCMC 
+Authors@R: c(
+      person("Liana Jacobi", email = "ljacobi@unimelb.edu.au", role = c("aut", "cph")),
+      person("Dan Zhu", email = "dan.zhu@monash.edu", role = c("aut", "cph")),
+      person("Chun Fung Kwok", email = "kwokcf@unimelb.edu.au", role = c("aut", "cre")),
+      person("Kai-Yang Goh", role = "ctb") 
+    )
+Description: This package performs a comprehensive local sensitivity analysis of MCMC 
     output with respect to all input parameters (prior hyper-parameters and 
     starting values) to assess prior robustness and algorithm convergence in 
-    models estimated via Gibbs samplers. It implements the forward method of 
-    Automatic Differentiation and exploits matrix and vector calculus results 
+    models estimated via Gibbs samplers. 
+    It extends the usual Automatic Differentiation to allow for differentiation of 
+    matrix decomposition and random samples, and it exploits matrix and vector calculus results 
     to compute large sets of Jacobian matrices that contain the first order 
-    derivatives of all MCMC draws with respect to all input parameters. It 
-    computes a range of sensitivity measures for posterior statistics such as 
-    prior robustness of posterior means and prediction intervals, as well as 
-    algorithm convergence measures bases on starting value sensitivities. 
+    derivatives of all MCMC draws with respect to all input parameters. 
+    A range of sensitivity measures for posterior statistics can be computed, 
+    such as prior robustness of posterior means and prediction intervals, 
+    as well as algorithm convergence measures bases on starting value sensitivities. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
