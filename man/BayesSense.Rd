@@ -4,15 +4,20 @@
 \alias{BayesSense}
 \title{Sensitivity analysis for Bayesian Inference}
 \description{
-This package computes local derivatives of Bayesian outputs, e.g.
-MCMC posterior estimates and performance measures, via Automatic differentiation.
+This package performs a comprehensive local sensitivity analysis of MCMC
+output with respect to all input parameters (prior hyper-parameters and starting values) to assess prior robustness and algorithm convergence in
+models estimated via Gibbs samplers.
+It extends the usual Automatic Differentiation to allow for differentiation of
+matrix decomposition and random samples, and it exploits matrix and vector calculus results
+to compute large sets of Jacobian matrices that contain the first order
+derivatives of all MCMC draws with respect to all input parameters.
+A range of sensitivity measures for posterior statistics can be computed,
+such as prior robustness of posterior means and prediction intervals,
+as well as algorithm convergence measures bases on starting value sensitivities.
 }
 \details{
 Package 'BayesSense'
 }
 \author{
-Liana Jacobi <ljacobi@unimelb.edu.au>,
-Dan Zhu <dan.zhu@monash.edu>,
-Chun Fung Kwok <kwokcf@unimelb.edu.au>,
-Kai-Yang Goh <kaiyanggoh@hotmail.com>
+Liana Jacobi [aut, cph], Dan Zhu [aut, cph], Chun Fung Kwok [aut, cre], Kai-Yang Goh [ctb]
 }

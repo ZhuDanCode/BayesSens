@@ -22,4 +22,7 @@ Currently the package supports
 ```{r}
 # install.packages("devtools")
 devtools::install_github("ZhuDanCode/BayesSense", build_vignettes = TRUE)
+
+# help(package = "BayesSense")
+# browseVignettes(package = "BayesSense")
 ```
