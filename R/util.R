@@ -12,22 +12,6 @@ pdmatrix <- function(...) {
 }
 
 
-#' This is a function to generate matrix with eigenvalue less than 1 based on
-#' some heuristic.
-#' @param dim integer; dimension of the matrix.
-#' @examples
-#' # Create a random 4 x 4 matrix with eigenvalue less than 1.
-#' mat <- s_eig_matrix(4)
-#' print(mat)
-#' eigen(mat)$value
-#' @export
-s_eig_matrix <- function(dim) {
-  matrix(rnorm(dim^2), dim, dim) %*%
-    diag(runif(dim, 0, 1/dim)) %*%
-    matrix(rnorm(dim^2), dim, dim)
-}
-
-
 # Create zero matrix
 zeros <- function(nr = 1, nc = 1) {
   matrix(numeric(nr * nc), nr, nc)

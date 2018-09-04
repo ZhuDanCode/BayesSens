@@ -41,7 +41,7 @@ p <- 10
 data0 <- gaussian_data(n, p, intercept = T)
 res <- gaussian_Gibbs(
   X = data0$X, y = data0$y,
-  b_0 = rnorm(p+1), B_0 = pdmatrix(p+1)$Sigma,  # add one for the intercept
+  b_0 = rnorm(p+1), B_0 = diag(p+1),  # add one for the intercept
   alpha_0 = 13, delta_0 = 8
 )
 }
