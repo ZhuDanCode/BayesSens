@@ -117,34 +117,70 @@ str(d_beta_on_d_B0)  # dimension = mcmc steps x length(beta) x length(B_0)
 Using the matrix calculus notation in [Magnus and Neudecker (1988)](#reference), $\dfrac{d \beta}{dB_0}$ is understood as $\dfrac{d \,vec(\beta)}{d\,vec(B_0)^T}$, where $vec$ denotes the vectorisation operator. 
 Since $\beta$ has $4$ elements, and $B_0$ have $16$ elements, $\dfrac{d \beta}{dB_0}$ is a $4 \times 16$ matrix, with the $(i,j)$ term representing the sensitivity 
 $$\dfrac{d \beta^{i}}{dB_0^{j}} \quad i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16.$$
-Adding an index for the $g$-th iteration gives us the sensitivity of the posterior sample $\beta^{i}$ at iteration $g$ w.r.t. $B_0^{j}$:
+We add an index for the $g$-th iteration to denote the sensitivity of the posterior sample $\beta^{i}$ at iteration $g$ w.r.t. $B_0^{j}$:
 $$\dfrac{d \beta^{i}_{(g)}}{dB_0^{j}} \quad i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16, \;\; g = 1, 2, ..., `r nrow(d_beta_on_d_B0)`$$.
 
-### Posterior sensitivity
-As a measure of prior robustness, we can examine the Jacabian, e.g. $E\left(\dfrac{d\beta}{d B_0}\right)$,
+### Prior robustness
+Prior robustness is a measure of the sensitivity of the posterior distribution with respect to the prior specification. In particular, we investigate how much some functional of the posterior distribution changes as the prior parameters change locally by examining the corresponding Jacabian matrix.
 ```{r}
-jacobian(d_beta_on_d_B0, dim0 = c(4, 16))
+jacobian(d_beta_on_d_B0, stat_fun = mean)
 ```
 
-We can also examine how sensitive the posterior samples of $\beta^1_{(g)}$ are to a change in the, say $(1,2)$, entry of the covariance matrix $B_0$ at each iteration (which is the 5-th element on the matrix as $B_0$ has dimension $4\times 4$). 
+Often, we want to examine the sensitivity over iterations. Continuing with our example, we want to plot the posterior mean, $d\left(\displaystyle\dfrac 1 n \sum_{g=1}^n \beta^1_{(g)}\right) \bigg /dB_0^5$ against $n$, where $\beta^1_{(g)}$ is the posterior sample of $\beta^1$ at iteration $g$. We first introduce the `cumulative_stat` function which has the following behaviour.
 
 ```{r}
-sens <- d_beta_on_d_B0[, 1, 5]
-plot(sens, 
-     main = "Sensitivity of posterior samples w.r.t the B_0[1,2]",
-     xlab = "Iteration", ylab = "Sensitivity")
+mean(1:10)
+cumulative_stat(1:10, mean)
+
+sd(1:10)
+cumulative_stat(1:10, sd)
 ```
 
-
-### Convergence analysis
-Then, we can plot out the sensitivity of the sample posterior mean against the number of iterations, i.e. $d\left(\displaystyle\dfrac 1 n \sum_{g=1}^n \beta^1_{(g)}\right) \bigg /dB_0^5$ against $n$, where again $\beta^1_{(g)}$ is the posterior sample of $\beta^1$ at iteration $g$. 
+So if we want to see the trajectory of the posterior mean over the iterations, we can pass in `cumulative_stat` with parameter `mean` instead of just `mean` alone. Here we only show the sensitivity for the $(1,1)$ entry of the Jacobian matrix. 
 ```{r}
-csens <- cumulative_stat(sens, mean)
-plot(csens, type = "l", 
+csens <- jacobian(d_beta_on_d_B0, stat_fun = cumulative_stat, fun = mean)
+plot(csens[, 1, 1], type = "l", 
      main = "Sensitivity of the Posterior Mean",
      xlab = "Iterations", ylab = "Sensitivity")
 ```
+In most applications, the resulting Jacobian is a large matrix, and it is helpful to inspect the average-case entry and the worst-case entry. Specifically, we plot the values of the average of the absolute entries and the largest absolute entry in the Jacobian against the number of iteration. 
 
+```{r}
+avg_case <- apply(abs(csens), 1, mean)
+wst_case <- apply(abs(csens), 1, max)
+
+# Setup empty plot
+plot(x = range(1:length(avg_case)),
+     y = extendrange(c(avg_case, wst_case), f = 0.1), 
+     type = 'n', 
+     main = "Summary sensitivity of the Posterior Mean",
+     xlab = "Iterations", ylab = "Sensitivity")
+# Add lines
+lines(avg_case, lwd = 2)
+lines(wst_case, col = 'red', lwd = 2)
+# Add legend
+legend("bottomright", col = c('black', 'red'), lwd = c(2, 2),
+       legend = c("Average-absolute sensitivity", 
+                  "Maximum-absolute sensitivity"))
+```
+
+### Convergence analysis
+
+The sensitivity measure provides an interesting alternative for convergence diagnostic. As one would expect, when the posterior samples reach stationarity, they essentially "forget" where they started, i.e. they are insensitive to the starting values. In the following, we plot the sensitivity of the posterior samples of $\beta$ w.r.t. the starting value $\sigma^2_0$.
+
+```{r, fig.height=8}
+d_beta_on_d_sigma2 <- get_sensitivity(res, "d_beta", "d_sigma2_0")
+sens <- jacobian(d_beta_on_d_sigma2, cumulative_stat, fun = mean)
+dim(sens)
+
+par(mfrow = c(2,2))  # Do a 2 x 2 subplots
+for (i in 1:4) {
+  plot(sens[,i,1], 
+       main = "Sensitivity of posterior samples w.r.t. sigma2_0", 
+       xlab = "Iteration", ylab = "Sensitivity", type = 'l')  
+}
+par(mfrow = c(1,1))  # Restore to default
+```
 
 
 ### Note: Vectorisation operator $vec$

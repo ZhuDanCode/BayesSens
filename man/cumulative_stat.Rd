@@ -4,12 +4,12 @@
 \alias{cumulative_stat}
 \title{Cumulative summary statistics}
 \usage{
-cumulative_stat(x, stat_fun, ...)
+cumulative_stat(x, fun, ...)
 }
 \arguments{
 \item{x}{numeric vector.}
 
-\item{stat_fun}{function; the summary statistics function.}
+\item{fun}{function; the summary statistics function.}
 
 \item{...}{Extra parameters to be passed to stat_fun.}
 }

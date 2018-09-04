@@ -4,13 +4,15 @@
 \alias{jacobian}
 \title{Jacobian matrix}
 \usage{
-jacobian(x, stat_fun = mean)
+jacobian(x, stat_fun = mean, ...)
 }
 \arguments{
 \item{x}{the sensitivity of the posterior samples}
 
 \item{stat_fun}{function; the summary statistics function,
 default to be the posterior mean.}
+
+\item{...}{extra parameters to be passed to `stat_fun`.}
 }
 \description{
 Jacobian matrix
