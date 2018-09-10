@@ -56,18 +56,18 @@ reshape_subplots <- function(len) {
 # }
 
 
-#' Plotting function for multivariate time series.
-#' @param data0 Numeric matrix; each column is one time series.
-#' @param x_axis Vector (optional); the break of the axis.
-#' @param ... Other parameters to be passed to the plot functions,
-#' e.g. 'xlab', 'ylab' and 'main'.
-#' @export
-plot_mts <- function(data0, x_axis, ...) {
-  data0 <- t(data0)
-  if (missing(x_axis)) x_axis <- 1:nrow(data0)
-  plot(range(x_axis), range(data0), type = 'n', ...)
-
-  for (i in 1:nrow(data0)) {
-    lines(x_axis, data0[i,], col = i)
-  }
-}
+#' #' Plotting function for multivariate time series.
+#' #' @param data0 Numeric matrix; each column is one time series.
+#' #' @param x_axis Vector (optional); the break of the axis.
+#' #' @param ... Other parameters to be passed to the plot functions,
+#' #' e.g. 'xlab', 'ylab' and 'main'.
+#' #' @export
+#' plot_mts <- function(data0, x_axis, ...) {
+#'   data0 <- t(data0)
+#'   if (missing(x_axis)) x_axis <- 1:nrow(data0)
+#'   plot(range(x_axis), range(data0), type = 'n', ...)
+#'
+#'   for (i in 1:nrow(data0)) {
+#'     lines(x_axis, data0[i,], col = i)
+#'   }
+#' }

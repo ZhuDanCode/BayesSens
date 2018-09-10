@@ -26,6 +26,8 @@ In this vignette, we introduce some basic functionalities of the `BayesSense` pa
 2. [Model specification](#model_spec)
 3. [MCMC Inference](#mcmc_infer)
 4. [MCMC Sensitivity Analysis](#mcmc_sense)
+    - 4.1 [Prior robustness](#prior_robust)
+    - 4.2 [Convergence analysis](#converge_analysis)
 5. [Reference](#reference)
 
 ## 1. Data simulation {#data_sim}
@@ -64,7 +66,7 @@ res <- gaussian_Gibbs(
   X = data0$X, y = data0$y,
   b_0 = numeric(p+1), B_0 = diag(p+1), # add one for intercept
   alpha_0 = 13, delta_0 = 8, 
-  num_steps = 1000
+  num_steps = 2000
 )
 ```
 
@@ -97,7 +99,7 @@ res <- gaussian_AD(
   X = data0$X, y = data0$y,
   b_0 = numeric(p+1), B_0 = diag(p+1),   # add one for intercept
   alpha_0 = 13, delta_0 = 8,
-  num_steps = 1000
+  num_steps = 2000
 )
 ```
 
@@ -118,15 +120,20 @@ Using the matrix calculus notation in [Magnus and Neudecker (1988)](#reference),
 Since $\beta$ has $4$ elements, and $B_0$ have $16$ elements, $\dfrac{d \beta}{dB_0}$ is a $4 \times 16$ matrix, with the $(i,j)$ term representing the sensitivity 
 $$\dfrac{d \beta^{i}}{dB_0^{j}} \quad i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16.$$
 We add an index for the $g$-th iteration to denote the sensitivity of the posterior sample $\beta^{i}$ at iteration $g$ w.r.t. $B_0^{j}$:
-$$\dfrac{d \beta^{i}_{(g)}}{dB_0^{j}} \quad i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16, \;\; g = 1, 2, ..., `r nrow(d_beta_on_d_B0)`$$.
+$$\dfrac{d \beta^{i}_{(g)}}{dB_0^{j}} \quad i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16, \;\; g = 1, 2, ..., `r nrow(d_beta_on_d_B0)`.$$
 
-### Prior robustness
-Prior robustness is a measure of the sensitivity of the posterior distribution with respect to the prior specification. In particular, we investigate how much some functional of the posterior distribution changes as the prior parameters change locally by examining the corresponding Jacabian matrix.
+
+### 4.1 Prior robustnes {#prior_robust}
+Prior robustness is a measure of the sensitivity of the posterior distribution with respect to the prior specification. In particular, one may ask how much some functional of the posterior distribution changes as the prior parameters change locally by examining the corresponding Jacabian matrix. Consider the posterior mean as an example:
+
 ```{r}
 jacobian(d_beta_on_d_B0, stat_fun = mean)
 ```
 
-Often, we want to examine the sensitivity over iterations. Continuing with our example, we want to plot the posterior mean, $d\left(\displaystyle\dfrac 1 n \sum_{g=1}^n \beta^1_{(g)}\right) \bigg /dB_0^5$ against $n$, where $\beta^1_{(g)}$ is the posterior sample of $\beta^1$ at iteration $g$. We first introduce the `cumulative_stat` function which has the following behaviour.
+The $(i,j)$ term of the Jacobian matrix above is (upon convergence) $\dfrac{d}{dB_0^{j}}\mathbb{E_{\beta^i | y}}[\beta^{i}]$ which represents how much the posterior mean of $\beta^{i}$ changes as the $j$-th entry changes (locally). 
+
+
+Often, we also want to examine the sensitivity over iterations, i.e we want to plot $d\left(\displaystyle\dfrac 1 n \sum_{g=1}^n \beta^i_{(g)}\right) \bigg /dB_0^j$ against $n$. To do that, we first introduce the `cumulative_stat` function:
 
 ```{r}
 mean(1:10)
@@ -136,55 +143,145 @@ sd(1:10)
 cumulative_stat(1:10, sd)
 ```
 
-So if we want to see the trajectory of the posterior mean over the iterations, we can pass in `cumulative_stat` with parameter `mean` instead of just `mean` alone. Here we only show the sensitivity for the $(1,1)$ entry of the Jacobian matrix. 
+As we see above, the `cumulative_stat` function turns a function into a cumulative version of it. If we want to see the trajectory of the posterior mean over the iterations, we can pass in `cumulative_stat` with parameter `mean` instead of just `mean` alone to the function `jacobian`. We plot the $(i=1, j=1)$-case.
+
 ```{r}
 csens <- jacobian(d_beta_on_d_B0, stat_fun = cumulative_stat, fun = mean)
-plot(csens[, 1, 1], type = "l", 
-     main = "Sensitivity of the Posterior Mean",
+plot(csens[1:1000, 1, 1], type = "l", 
+     main = "The (1,1)-sensitivity of the Posterior Mean over iteration",
      xlab = "Iterations", ylab = "Sensitivity")
 ```
-In most applications, the resulting Jacobian is a large matrix, and it is helpful to inspect the average-case entry and the worst-case entry. Specifically, we plot the values of the average of the absolute entries and the largest absolute entry in the Jacobian against the number of iteration. 
+
+#### Remark
+1. Note that the `jacobian` function works only when the following is true
+$$\dfrac{\partial}{\partial \theta_0} Ef(\mathbf{\beta}) = E \left(\dfrac{\partial}{\partial \theta_0} f(\mathbf{\beta})\right)$$
+Two examples that would work for $f$ are the mean and the standard derivation, and an example that would require separate handling is the quantile. 
+
+2. For the experienced R users, `jacobian(x, f, ...)` is just syntactic sugar for `apply(x, c(2,3), f, ...)`.
+
+#### Jacobian summary
+In most applications, the resulting Jacobian is a large matrix, and it is useful to inspect the summary of the Jacobian matrix over iterations rather than one entry at a time. Two useful summaries of a matrix are the Frobenius norm and the Maximum norm. 
 
 ```{r}
-avg_case <- apply(abs(csens), 1, mean)
-wst_case <- apply(abs(csens), 1, max)
+frobenius_norm <- function(A) { sqrt(sum(A^2)) }
+maximum_norm <- function(A) { max(abs(A)) }
+
+f_case <- apply(csens, 1, frobenius_norm)
+m_case <- apply(csens, 1, maximum_norm)
 
 # Setup empty plot
-plot(x = range(1:length(avg_case)),
-     y = extendrange(c(avg_case, wst_case), f = 0.1), 
+plot(x = range(1:1000),
+     y = range(c(f_case, m_case)), 
      type = 'n', 
-     main = "Summary sensitivity of the Posterior Mean",
+     main = "Sensitivity summary of the Posterior Mean",
      xlab = "Iterations", ylab = "Sensitivity")
 # Add lines
-lines(avg_case, lwd = 2)
-lines(wst_case, col = 'red', lwd = 2)
+lines(f_case, lwd = 2)
+lines(m_case, col = 'red', lwd = 2)
 # Add legend
 legend("bottomright", col = c('black', 'red'), lwd = c(2, 2),
-       legend = c("Average-absolute sensitivity", 
-                  "Maximum-absolute sensitivity"))
+       legend = c("Frobenius norm", "Maximum norm"))
 ```
 
-### Convergence analysis
+The maximum norm of the Jacobian matrix $\dfrac{d}{dB_0}\mathbb{E_{\beta|y}}[\beta]$ gives an upper bound of all the sensitivities in the matrix. One may be interested in such quantity in the worst-case analysis.
 
-The sensitivity measure provides an interesting alternative for convergence diagnostic. As one would expect, when the posterior samples reach stationarity, they essentially "forget" where they started, i.e. they are insensitive to the starting values. In the following, we plot the sensitivity of the posterior samples of $\beta$ w.r.t. the starting value $\sigma^2_0$.
+### 4.2 Convergence analysis {#converge_analysis}
+
+The study of prior robustness above reveals an interesting alternative for convergence diagnostic. As one would expect, when the posterior samples approach stationarity, they essentially "forget" where they started, i.e. they become insensitive to the *starting values*. To illustrate the idea, in the following we examine the sensitivity of the posterior samples of $\beta$ w.r.t. the starting value $\sigma^2_0$.
 
 ```{r, fig.height=8}
 d_beta_on_d_sigma2 <- get_sensitivity(res, "d_beta", "d_sigma2_0")
-sens <- jacobian(d_beta_on_d_sigma2, cumulative_stat, fun = mean)
-dim(sens)
+dim(d_beta_on_d_sigma2)
 
-par(mfrow = c(2,2))  # Do a 2 x 2 subplots
-for (i in 1:4) {
-  plot(sens[,i,1], 
-       main = "Sensitivity of posterior samples w.r.t. sigma2_0", 
-       xlab = "Iteration", ylab = "Sensitivity", type = 'l')  
-}
-par(mfrow = c(1,1))  # Restore to default
+# first 10 MCMC iteration of d_beta_i / d_sigma2_0, i = 1, 2, 3, 4.
+d_beta_on_d_sigma2[1:10,,]
 ```
 
+From the output, we observe exponential decay of posterior-samples sensitivities w.r.t. the starting value. Using these sensitivities, we can find the sensitivity of some functional of the posterior samples. Again consider the posterior mean:
 
-### Note: Vectorisation operator $vec$
+```{r}
+# Sensitivity of the Posterior Mean
+posterior_mean_sens <- jacobian(d_beta_on_d_sigma2, stat_fun = mean)
+print(posterior_mean_sens)
+
+# See the entire trajectory
+posterior_mean_sens_traj <- jacobian(
+  d_beta_on_d_sigma2, stat_fun = cumulative_stat, fun = mean
+)
+# Take absolute value for plotting purposes
+abs_pmst <- abs(posterior_mean_sens_traj)
+dim(abs_pmst)
+```
+
+```{r}
+# Plotting
+# Show the first 300 iteration because the sensitivities decay very quickly
+show_iter <- 1:300  
+
+# Setup empty plot
+plot(x = range(show_iter), 
+     y = range(abs_pmst[show_iter,,]), 
+     type = 'n',
+     main = "Convergence analysis of the Posterior Mean",
+     xlab = "Iteration", ylab = "Sensitivity")
+
+# Plot the maximum of the four sensitivities in red
+max_sens <- apply(abs_pmst[show_iter,,, drop = F], c(1, 3), max)
+lines(max_sens, col = 'red', lwd = 6)
+
+# Plot d beta_i / d_sigma2_0, i = 1, 2, 3, 4.
+for (i in 1:ncol(abs_pmst)) {
+  lines(abs_pmst[show_iter, i, 1], lty = i + 1, lwd = 2)  
+}
+
+# Add legend
+legend("topright", 
+       legend = c(
+         "d E (beta_1) / d_sigma2_0", "d E (beta_2) / d_sigma2_0", 
+         "d E (beta_3) / d_sigma2_0", "d E (beta_4) / d_sigma2_0", 
+         "Maximum"
+        ),
+       col = c(rep("black", 4), "red"), 
+       lwd = c(rep(2, 4), 6),
+       lty = c(2:5, 1))
+```
+
+From the plot above, we see that the sensitivity of the posterior mean decays quickly. Since we actually want the posterior mean **after samples have converged**, we should determine a cut-off point for the number of iterations. This proceeds in two steps:
+
+1. By inspection, we cut-off the draws at around the point after which the most dramatic drop in sensitivity has occured. In our example, this happens at around 100~150.
+
+2. Next, we recompute the sensitivity of the posterior statistics, and exclude more draws until the sensitivity is close to as predicted by the theory. In more detail, MCMC theory suggests that the sensitivity w.r.t. the starting value should be zero for stationary draws. We could pick the cut-off point $M$ s.t. the sensitivity is less than some threshold, say $\epsilon = 10^{-8}$. In our example, this is not needed as the sensitivity is indeed zero:
+
+```{r}
+# Recompute the sensitivity of the posterior mean except this time we exclude the first 150 iterations.
+posterior_mean_sens_traj <- jacobian(
+  d_beta_on_d_sigma2[-(1:150), , , drop = F], 
+  stat_fun = cumulative_stat, fun = mean
+)
+abs_pmst <- abs(posterior_mean_sens_traj)
+str(abs_pmst)
+head(abs_pmst[,,1], 10)
+```
+
+### Rationale
+MCMC theory tells us about the asymptotic behaviour of the MCMC draws. 
+In practice, one usually does not run the MCMC chain indefinitely, hence it is important to draw the line at which the samples are **effectively** stationary. To be specific, we define that the posterior draws are effectively stationary w.r.t. a statistical functional $f$ to the level of $\epsilon$ if 
+$$|E_{\hat\pi}f  - E_{\pi}f| < \epsilon,$$
+where $\hat\pi$ refers to the empirical distribution of the posterior draws and $\pi$ refers to the true posterior distribution. In other words, the inequality says the statistical functional evaluated with the non-stationary draws is effectively the same (to $\epsilon$) as the stationary draws.
+
+The terminology arises to address the observation that summary statistics converge much faster than the distribution. Intuitively, getting a good mean estimate is much easier than getting a good density estimate. And if the quantities of interest are a few summary statistics, then one should not "expand" the problem into finding the density. Similar reasoning is commonly made in the statistical learning community, in particular, readers are referred to work by Vapnik (1998).
+
+In situations where one indeed needs to know about the entire distribution, one could:
+  - in the univariate case, reduce the sensitivity of the distribution to the sensitivity of a set of quantiles. This makes sense because when one fixes the quantiles (say 20 of them at 5% increment), one "locks" the points on the distribution function. And naturally, the more points used, the better knowledge one gets about the distribution. Under suitable assumptions, e.g. degree of smoothness or the number of jumps allowed, one can also work out how good the reduction is;
+  - in the multivariate case, take random projections (onto $\mathbf{R}$) and then proceed as given in the univariate case. 
+
+Since in reality we do not have infinite draws, it is crucial to focus on the finite counterpart of the asymptotic results. 
+In particular, we want to know given a fixed number of iterations, how much accuracy can we achieve, and given a fixed accuracy, how large the number of iterations needs to be. 
+
+#### Note: Vectorisation operator $vec$
 Suppose $A = \left[\begin{array}{cc} a &b \\ c &d \end{array}\right]$, then $vec(A) = \left[\begin{array}{c} a \\c \\ b \\d \end{array}\right]$.
 
 ## 5. Reference {#reference}
 Magnus, J. R., & Neudecker, H. (1988). Matrix differential calculus with applications in statistics and econometrics. *Wiley series in probability and mathematical statistics.*
+
+Vapnik, V. (1998). Statistical learning theory. 1998 (Vol. 3). *Wiley, New York.*

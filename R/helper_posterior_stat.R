@@ -20,8 +20,3 @@ jacobian <- function(x, stat_fun = mean, ...) {
   f <- function(y) { stat_fun(y, ...) }
   apply(x, c(2, 3), f)
 }
-
-
-matrix_functional <- function(x, fun, ...) {
-
-}
