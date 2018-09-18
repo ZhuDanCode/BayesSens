@@ -1,0 +1,118 @@
+---
+title: "`BayesSense` Two-equation SUR model with independent Normal-Inverse Gamma priors"
+# author: "[add author name]"
+date: "Last updated on: `r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+%\VignetteIndexEntry{Package introduction and Gaussian distribution}
+%\VignetteEngine{knitr::rmarkdown}
+%\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width=7, fig.height=5,
+  eval = T
+)
+```
+
+
+```{r}
+library(BayesSense)
+set.seed(123)
+n <- 1000
+p <- 2
+k <- 3
+pd0 <- pdmatrix(2)
+data0 <- SUR2_data(
+  n, p, k,
+  Sigma = pd0$Sigma,
+  intercept_1 = TRUE, intercept_2 = TRUE
+)
+```
+
+```{r}
+res <- SUR2_AD(
+  Xy = data0$Xy, y = data0$y,
+  b_0 = numeric(p + 2), B_0 = diag(p + 2),
+  Xs = data0$Xs, s = data0$s,
+  g_0 = numeric(k + 1), G_0 = diag(k + 1),
+  v_0 = 5, R_0 = diag(2), 
+  num_steps = 1e3
+)
+```
+
+
+### Jacobian summary sensitivity
+```{r}
+available_sensitivity(res)
+sens <- get_sensitivity(res, "d_beta", "d_gamma0")
+jacobian_max_norm <- apply(sens, 1, maximum_norm)
+plot(jacobian_max_norm, type = 'l', 
+     main = "Maximum norm of the Jacobian of the posterior draws")
+
+head(jacobian_max_norm, 40)
+```
+
+```{r}
+sens <- get_sensitivity(res, "d_beta", "d_Sigma0")
+max_sens <- apply(sens, 1, max)
+plot(log(max_sens[1:200]), type = 'l')
+```
+
+
+
+### Posterior functional sensitivity
+```{r}
+jacobian(sens, stat_fun = mean)
+
+trace0 <- jacobian(sens, stat_fun = cumulative_stat, fun = mean)
+jacobian_max_norm <- apply(sens, 1, maximum_norm)
+plot(jacobian_max_norm, type = 'l', 
+     main = "Maximum norm of the Jacobian of the posterior mean")
+```
+
+### Choosing the threshold
+```{r}
+epsilon <- 1e-8
+threshold <- 2 * min(which(jacobian_max_norm < 1e-8))
+```
+
+### Conversion of threshold
+
+
+
+### Verification with long MCMC chain
+```{r}
+library(magrittr)
+posterior_mean_est <- res$beta %>% 
+  burn_ins(7) %>% 
+  apply(2, mean)
+
+# a <- res$beta %>% 
+#   burn_ins(100) %>% 
+#   cov()
+```
+
+```{r}
+mcmc_draws <- SUR2_Gibbs(
+  Xy = data0$Xy, y = data0$y,
+  b_0 = numeric(p + 2), B_0 = diag(p + 2),
+  Xs = data0$Xs, s = data0$s,
+  g_0 = numeric(k + 1), G_0 = diag(k + 1),
+  v_0 = 5, R_0 = diag(2),
+  num_steps = 50000
+)
+stationary_posterior_mean <- mcmc_draws$beta %>% 
+  tail(1000) %>% 
+  apply(2, mean)
+
+# b <- mcmc_draws$beta %>% 
+#   tail(1000) %>% 
+#   cov()
+
+# Expect at small difference
+posterior_mean_est - stationary_posterior_mean
+```
