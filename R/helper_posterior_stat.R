@@ -20,3 +20,32 @@ jacobian <- function(x, stat_fun = mean, ...) {
   f <- function(y) { stat_fun(y, ...) }
   apply(x, c(2, 3), f)
 }
+
+
+#' Frobenius norm of a matrix
+#' @param A A numeric matrix
+#' @export
+frobenius_norm <- function(A) { sqrt(sum(A^2)) }
+
+
+#' Maximum norm of a matrix
+#' @param A A numeric matrix
+#' @export
+maximum_norm <- function(A) { max(abs(A)) }
+
+
+#' Remove the burn-in samples
+#' @param res The Jacobian array.
+#' @param num_burns Positive integer; the number of samples to burn.
+#' @export
+burn_ins <- function(res, num_burns) {
+  res[-seq(num_burns), ]
+}
+
+
+#' Thinning the samples
+#' @param vec0 A numeric vector; the samples.
+#' @param every_n Positive integer; take one sample every_n sample.
+thinning <- function(vec0, every_n) {
+  vec0[seq(1, length(vec0), every_n)]
+}
