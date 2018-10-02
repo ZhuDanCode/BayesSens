@@ -123,7 +123,7 @@ We add an index for the $g$-th iteration to denote the sensitivity of the poster
 $$\dfrac{d \beta^{i}_{(g)}}{dB_0^{j}} \quad i = 1, 2, 3, 4,\;\; j = 1, 2, ..., 16, \;\; g = 1, 2, ..., `r nrow(d_beta_on_d_B0)`.$$
 
 
-### 4.1 Prior robustnes 
+### Prior robustnes 
 <!-- {#prior_robust} -->
 Prior robustness is a measure of the sensitivity of the posterior distribution with respect to the prior specification. In particular, one may ask how much some functional of the posterior distribution changes as the prior parameters change locally by examining the corresponding Jacabian matrix. Consider the posterior mean as an example:
 
@@ -182,6 +182,49 @@ legend("bottomright", col = c('black', 'red'), lwd = c(2, 2),
 ```
 
 The maximum norm of the Jacobian matrix $\dfrac{d}{dB_0}\mathbb{E_{\beta|y}}[\beta]$ gives an upper bound of all the sensitivities in the matrix. One may be interested in such quantity in the worst-case analysis.
+
+### Diagnostic 
+MCMC theory suggests the sensitivity of the posterior draws to the initial value goes to zero as the draws approach stationarity. 
+
+```{r}
+init_val_sens <- get_sensitivity(res, "d_beta", "d_sigma2_0")
+plot0(log(apply(init_val_sens, 1, frobenius_norm)), 
+      log(apply(init_val_sens, 1, maximum_norm)))
+```
+
+Indeed, given that our model specification aligns with the data generating process, we observe extremely fast decay of sensitivities. 
+
+Here is a more typical example:
+```{r, echo = F}
+library(BayesSense)
+set.seed(123)
+n <- 100
+p <- 3
+# k <- 3
+# pd0 <- pdmatrix(2)
+# data1 <- SUR2_data(
+#   n, p, k, Sigma = pd0$Sigma,
+#   intercept_1 = TRUE, intercept_2 = TRUE
+# )
+# str(data1)
+
+# data1 <- student_t_data(n = 100, p = 3, beta = c(0.03, 0.2, -0.3, 0.4), df = 2, intercept = T)
+
+library(glmSimData)
+X <- generate_dependent_covariates(n, p)$covariates
+y <- generate_response(X, beta = c(0.2, -0.3, 0.4), family = poisson())
+res <- gaussian_AD(
+  X = as.matrix(X), y = log(1 + y$resp_var) + rnorm(n),
+  b_0 = numeric(p), B_0 = diag(p),   # add one for intercept
+  alpha_0 = 13, delta_0 = 8,
+  num_steps = 2000
+)
+
+init_val_sens <- get_sensitivity(res, "d_beta", "d_sigma2_0")
+plot0(log(apply(init_val_sens, 1, frobenius_norm)), 
+      log(apply(init_val_sens, 1, maximum_norm)))
+```
+
 
 <!-- ### 4.2 Convergence analysis  -->
 <!-- {#converge_analysis} -->
