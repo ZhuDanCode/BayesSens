@@ -5,7 +5,7 @@ plot_posterior <- function(res) {
   plot_hist <- function(x, lab) {
     hist(x, 20, probability = T, xlab = lab, main = 'Posterior distribution')
   }
-  is_single_col <- . %>% {is.null(ncol(.))}
+  is_single_col <- . %>% { is.null(ncol(.)) }
 
   reshape_subplots(num_param(res))
   for (i in seq_along(res)) {

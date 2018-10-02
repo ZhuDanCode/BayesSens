@@ -22,7 +22,6 @@
 #' @export
 SUR2_data <- function(n, p, k, beta, gamma, Sigma,
                          intercept_1 = TRUE, intercept_2 = TRUE) {
-
   num_covariates_1 <- ifelse(intercept_1, p + 2, p + 1)
   if (missing(beta)) beta <- rnorm(num_covariates_1)
   if (length(beta) != num_covariates_1)
