@@ -1,16 +1,14 @@
 apply_chain <- function(expr_fun, hyperparameter) {
   if (!is.function(expr_fun)) return(0)
-  res <- purrr::map(hyperparameter, expr_fun)
-  names(res) <- hyperparameter
-  res
+  structure(purrr::map(hyperparameter, expr_fun), names = hyperparameter)
 }
 
 
 d_chol <- function(L, dA, I_nn, K_nn, I_n, E_n, fac_1) {
   # LL^T = A
   n <- nrow(L)
-  if (missing(I_n)) I_n <- Matrix::Diagonal(n)
-  if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
+  if (missing(I_n)) I_n <- memo_Diagonal(n)
+  if (missing(I_nn)) I_nn <- memo_Diagonal(n^2)
   if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
   if (missing(E_n)) E_n <- elimination_matrix(n)
   D_n <- Matrix::t(E_n)
@@ -30,8 +28,8 @@ d_transpose <- function(X, dX, K_nq) {
 
 d_XXT <- function(X, dX, I_nn, K_nn, I_n) {
   n <- nrow(X)
-  if (missing(I_n)) I_n <- Matrix::Diagonal(n)
-  # if (missing(I_nn)) I_nn <- Matrix::Diagonal(n^2)
+  if (missing(I_n)) I_n <- memo_Diagonal(n)
+  # if (missing(I_nn)) I_nn <- memo_Diagonal(n^2)
   # if (missing(K_nn)) K_nn <- commutation_matrix(n, n)
   hyperparam <- names(dX)
   if (n < 50) {
@@ -53,11 +51,11 @@ d_kronecker <- function(A, dA, B, dB, fac_1, I_mn, I_pq, I_n, K_qm, I_p) {
   p <- nrow(B)
   q <- ncol(B)
   if (missing(fac_1)) {
-    if (missing(I_n)) I_n <- Matrix::Diagonal(n)
+    if (missing(I_n)) I_n <- memo_Diagonal(n)
     if (missing(K_qm)) K_qm <- commutation_matrix(q, m)
-    if (missing(I_p)) I_p <- Matrix::Diagonal(p)
-    if (missing(I_mn)) I_mn <- Matrix::Diagonal(m*n)
-    if (missing(I_pq)) I_pq <- Matrix::Diagonal(p*q)
+    if (missing(I_p)) I_p <- memo_Diagonal(p)
+    if (missing(I_mn)) I_mn <- memo_Diagonal(m*n)
+    if (missing(I_pq)) I_pq <- memo_Diagonal(p*q)
     fac_1 <- (I_n %x% K_qm %x% I_p)
   }
   ind <- case(dA, dB)
@@ -90,8 +88,8 @@ d_sum <- function(dA, dB) {
 d_product <- function(A, dA, B, dB, I_a, I_b) {
   if (is.vector(A)) A <- as.matrix(A)
   if (is.vector(B)) B <- as.matrix(B)
-  if (missing(I_a)) I_a <- Matrix::Diagonal(nrow(A))
-  if (missing(I_b)) I_b <- Matrix::Diagonal(ncol(B))
+  if (missing(I_a)) I_a <- memo_Diagonal(nrow(A))
+  if (missing(I_b)) I_b <- memo_Diagonal(ncol(B))
   ind <- case(dA, dB)
   # expr_fun <- switch(ind,
   #    '0' = . %>% {(I_b %x% A) %*% dB[[.]] + (t(B) %x% I_a) %*% dA[[.]]},
