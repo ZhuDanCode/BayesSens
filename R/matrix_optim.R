@@ -88,6 +88,8 @@ A_times_K_nq <- function(A, n, q) {
 }
 
 K_nq_times_A <- function(A, n, q) {
+  n <- as.numeric(n)
+  q <- as.numeric(q)
   s <- 1 + seq(0, by = n, length.out = n*q) %% (n*q - 1)
   s[n*q] <- n * q
   A[s,]
