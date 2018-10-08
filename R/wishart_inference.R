@@ -31,9 +31,9 @@
 SUR2_Gibbs <- function(Xy, y, b_0, B_0, Xs, s, g_0, G_0, v_0, R_0,
                           init_gamma, init_Sigma, num_steps = 1e4) {
   if (missing(init_gamma))
-    init_gamma <- g_0 + t(chol(G_0)) %*% rnorm(length(g_0)) %>% as.vector()
+    init_gamma <- numeric(length(g_0))
   if (missing(init_Sigma))
-    init_Sigma <- matrix(rWishart(1, v_0, R_0), 2, 2)
+    init_Sigma <- diag(2)
 
   # Initialisation
   n <- length(y)
